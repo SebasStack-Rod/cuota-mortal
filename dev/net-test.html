@@ -30,6 +30,9 @@
     <button id="apostar">Apostar $1 a cara</button>
     <button id="apostarBig">Apostar $5.000 a cara</button>
   </div>
+  <div>
+    <button id="revancha">Revancha (anfitrión, tras GAME OVER)</button>
+  </div>
   <div id="resumen" style="font-size:20px;background:#1b1b1b;padding:10px;border-radius:10px;margin:8px 0;line-height:1.6">
     Sin sala
   </div>
@@ -67,16 +70,27 @@
     session.on('tableEvent', (e) => log(`evento ${e.gameId}/${e.name}: ${JSON.stringify(e.data)}`));
 
     const AYUDA = {
-      no_es_momento: 'ahora no se puede: el anfitrión tiene que tocar "Iniciar partida" (y "Día de 10 s" va ANTES de iniciar)',
+      no_es_momento: null,   // se resuelve según la fase, en ayudaFase()
       solo_anfitrion: 'ese botón es solo para el anfitrión (quien creó la sala)',
       no_sentado: 'primero tocá "Sentarse"',
       sin_fondos: 'el banco no alcanza para esa apuesta',
       juego_inexistente: 'ese juego no está cargado',
     };
+    function ayudaFase() {
+      const f = session.getState()?.phase;
+      if (!f) return 'primero creá o uníte a una sala';
+      if (f === 'lobby') return 'la partida todavía no empezó: el anfitrión tiene que tocar "Iniciar partida" (el día se fija antes, con "Día de 10 s")';
+      if (f === 'day') return 'el día ya está en curso';
+      if (f === 'collect') return 'está cobrando la cuota, esperá unos segundos';
+      if (f === 'shop') return 'está la tienda entre días, esperá a que empiece el día siguiente';
+      return 'la partida terminó: el anfitrión puede tocar "Revancha"';
+    }
     async function run(label, fn) {
       try {
         const r = await fn();
-        const extra = r && r.ok === false && AYUDA[r.error] ? ' → ' + AYUDA[r.error] : '';
+        const extra = r && r.ok === false
+          ? ' → ' + (r.error === 'no_es_momento' ? ayudaFase() : (AYUDA[r.error] || ''))
+          : '';
         log(`${label}: ${r && r.ok === false ? 'ERROR ' + r.error + extra : 'ok'}`);
       } catch (e) {
         log(`${label}: EXCEPCIÓN ${e.code || ''} ${e.message}`);
@@ -95,6 +109,7 @@
     $('sentar').onclick = () => run('sentarse', () => session.sitAt('dummy'));
     $('parar').onclick = () => run('pararse', () => session.standUp());
     $('apostar').onclick = () => run('apostar $1', () => session.sendGameAction('dummy', { type: 'bet', side: 'cara', amount: 100 }));
+    $('revancha').onclick = () => run('revancha', () => session.rematch());
     $('apostarBig').onclick = () => run('apostar $5.000', () => session.sendGameAction('dummy', { type: 'bet', side: 'cara', amount: 500000 }));
   </script>
 </body>

@@ -209,7 +209,8 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
           r = ok();
         }
         break;
-      case 'proposeItem': case 'vote': case 'rematch': r = fail('pendiente_fase_4'); break;
+      case 'rematch': r = rematch(from); break;
+      case 'proposeItem': case 'vote': r = fail('pendiente_fase_4'); break;
       default: r = fail('accion_desconocida');
     }
     refreshTables();
@@ -226,6 +227,24 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
     startDay(now(), 1);
     refreshTables();
     onChange(true);
+    return ok();
+  }
+
+  // Revancha: solo el anfitrión, solo al terminar la partida. Vuelve al lobby con los mismos jugadores.
+  function rematch(from) {
+    if (from !== hostId) return fail('solo_anfitrion');
+    if (state.phase !== 'gameover' && state.phase !== 'victory') return fail('no_es_momento');
+    instances = {};
+    collectNext = null;
+    state.phase = 'lobby';
+    state.day = 1;
+    state.bank = 0;
+    state.quota = quotaFor(1);
+    state.collect = null;
+    state.shopEndsAt = null;
+    state.dayEndsAt = null;
+    state.tables = {};
+    for (const p of Object.values(state.players)) { p.seat = null; p.stats = zeroStats(); }
     return ok();
   }
 
