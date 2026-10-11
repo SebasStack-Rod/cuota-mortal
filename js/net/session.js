@@ -116,7 +116,10 @@ function scheduleFlush(immediate) {
   if (!patchTimer) patchTimer = setTimeout(flushPatch, PATCH_EVERY_MS);
 }
 const hostChanged = (immediate) => scheduleFlush(immediate);
-function onHostTableEvent(ev) { send('table_event', ev); emit('tableEvent', ev); }
+function onHostTableEvent(ev) {
+  send('table_event', ev);
+  if (ev.to.includes(me.id)) emit('tableEvent', { gameId: ev.gameId, name: ev.name, data: ev.data });
+}
 
 // ---------- mensajes que recibe el anfitrión ----------
 function onHello({ id, name }) {
@@ -185,7 +188,9 @@ function openChannel(code) {
   ch.on('broadcast', { event: 'intent_result' }, ({ payload }) => payload.to === me.id && onIntentResult(payload));
   ch.on('broadcast', { event: 'state_full' }, ({ payload }) => !host && onStateFull(payload));
   ch.on('broadcast', { event: 'state_patch' }, ({ payload }) => !host && onStatePatch(payload));
-  ch.on('broadcast', { event: 'table_event' }, ({ payload }) => !host && emit('tableEvent', payload));
+  ch.on('broadcast', { event: 'table_event' }, ({ payload }) => {
+    if (!host && payload.to.includes(me.id)) emit('tableEvent', { gameId: payload.gameId, name: payload.name, data: payload.data });
+  });
   ch.on('presence', { event: 'sync' }, onPresenceSync);
   return ch;
 }
@@ -225,11 +230,16 @@ async function reopen() {
   }
 }
 
+// Manda "hello" y lo repite cada segundo hasta que el anfitrión responda (o pasen 3 s).
+// Es seguro repetirlo: si el anfitrión ya te anotó, solo confirma de nuevo.
 function requestJoin(id, name) {
   return new Promise((resolve) => {
-    const timer = setTimeout(() => { pendingJoin = null; resolve(null); }, JOIN_TIMEOUT_MS);
-    pendingJoin = (p) => { clearTimeout(timer); resolve(p); };
+    let intervalo = null;
+    const timer = setTimeout(() => terminar(null), JOIN_TIMEOUT_MS);
+    function terminar(p) { clearInterval(intervalo); clearTimeout(timer); pendingJoin = null; resolve(p); }
+    pendingJoin = terminar;
     send('hello', { id, name });
+    intervalo = setInterval(() => send('hello', { id, name }), 1000);
   });
 }
 

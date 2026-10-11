@@ -30,6 +30,9 @@
     <button id="apostar">Apostar $1 a cara</button>
     <button id="apostarBig">Apostar $5.000 a cara</button>
   </div>
+  <div id="resumen" style="font-size:20px;background:#1b1b1b;padding:10px;border-radius:10px;margin:8px 0;line-height:1.6">
+    Sin sala
+  </div>
   <h3>Registro</h3>
   <pre id="log"></pre>
   <h3>Estado (RoomState)</h3>
@@ -39,6 +42,7 @@
     // dev/net-test.html: prueba la sesión con dos pestañas. Abrir desde un servidor local, no con doble clic.
     import { session } from '../js/net/session.js';
     import * as dummy from './dummy-game.js';
+    import { fmt } from '../js/core/money.js';
 
     session.setGameLoader(async () => ({ dummy: { logic: async () => dummy } }));
 
@@ -46,15 +50,34 @@
     const log = (t) => { $('log').textContent = new Date().toLocaleTimeString() + '  ' + t + '\n' + $('log').textContent; };
     const nombre = () => $('nombre').value.trim() || 'Prueba';
 
-    session.on('state', (s) => { $('estado').textContent = s ? JSON.stringify(s, null, 2) : 'sin sala'; });
+    session.on('state', (s) => {
+      $('estado').textContent = s ? JSON.stringify(s, null, 2) : 'sin sala';
+      $('resumen').innerHTML = s ? resumen(s) : 'Sin sala';
+    });
+    const FASES = { lobby: 'Lobby (esperando)', day: 'Día en curso', collect: 'Cobrando la cuota', shop: 'Tienda', victory: '¡VICTORIA!', gameover: 'GAME OVER' };
+    function resumen(s) {
+      const sentados = Object.values(s.players).filter(p => p.seat).map(p => p.name);
+      return `<b>${FASES[s.phase] || s.phase}</b> · Día ${s.day}/7<br>`
+        + `<b>Banco común: ${fmt(s.bank)}</b> · Cuota de hoy: ${fmt(s.quota)}<br>`
+        + `Jugadores: ${Object.values(s.players).map(p => p.name).join(', ') || '—'}<br>`
+        + `Sentados en "dummy": ${sentados.join(', ') || 'nadie'}`;
+    }
     session.on('toast', (t) => log(`[${t.kind}] ${t.text}`));
     session.on('connection', (c) => log('conexión: ' + c));
     session.on('tableEvent', (e) => log(`evento ${e.gameId}/${e.name}: ${JSON.stringify(e.data)}`));
 
+    const AYUDA = {
+      no_es_momento: 'ahora no se puede: el anfitrión tiene que tocar "Iniciar partida" (y "Día de 10 s" va ANTES de iniciar)',
+      solo_anfitrion: 'ese botón es solo para el anfitrión (quien creó la sala)',
+      no_sentado: 'primero tocá "Sentarse"',
+      sin_fondos: 'el banco no alcanza para esa apuesta',
+      juego_inexistente: 'ese juego no está cargado',
+    };
     async function run(label, fn) {
       try {
         const r = await fn();
-        log(`${label}: ${r && r.ok === false ? 'ERROR ' + r.error : 'ok'}`);
+        const extra = r && r.ok === false && AYUDA[r.error] ? ' → ' + AYUDA[r.error] : '';
+        log(`${label}: ${r && r.ok === false ? 'ERROR ' + r.error + extra : 'ok'}`);
       } catch (e) {
         log(`${label}: EXCEPCIÓN ${e.code || ''} ${e.message}`);
       }

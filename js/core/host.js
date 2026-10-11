@@ -59,7 +59,12 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
     for (const e of effects) {
       if (e.type === 'debit') state.bank -= e.amount;
       else if (e.type === 'credit') state.bank += e.amount;
-      else if (e.type === 'event') onTableEvent({ gameId, name: e.name, data: e.data });
+      else if (e.type === 'event') {
+        // El aviso llega solo a quienes están en esa mesa (o al dueño, si el juego es 'solo').
+        const solo = modules[gameId] && modules[gameId].meta.mode === 'solo';
+        const to = solo && e.data && e.data.playerId ? [e.data.playerId] : seatedIds(gameId);
+        onTableEvent({ gameId, name: e.name, data: e.data, to });
+      }
     }
     return true;
   }
@@ -116,8 +121,8 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
   function sit(pid, gameId) {
     const p = state.players[pid];
     if (!p) return fail('no_en_sala');
-    if (!modules[gameId]) return fail('juego_inexistente');
     if (state.phase !== 'day') return fail('no_es_momento');
+    if (!modules[gameId]) return fail('juego_inexistente');
     if (p.seat === gameId) return ok();
     standUp(pid);
     p.seat = gameId;
