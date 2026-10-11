@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prueba de la base (Fase 1)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee; padding: 16px; }
+    pre { font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Prueba de la base (Fase 1)</h1>
+  <pre id="salida">Corriendo pruebas...</pre>
+
+  <script type="module">
+    // dev/base-test.html: comprueba money.js, rng.js y los valores de config.js. Solo para desarrollo.
+    // Hay que abrirla desde un servidor local (Live Server o python -m http.server), no con doble clic.
+    import { CONFIG } from '../js/config.js';
+    import { fmt, chipUrl, breakdown } from '../js/core/money.js';
+    import { hostRng, seededRng } from '../js/core/rng.js';
+
+    const lineas = [];
+    function chequear(nombre, ok, extra = '') {
+      lineas.push((ok ? '✅ ' : '❌ ') + nombre + (extra ? '  → ' + extra : ''));
+    }
+
+    // money.js
+    chequear('fmt(100000) es $1.000', fmt(100000) === '$1.000', fmt(100000));
+    chequear('fmt(25) es $0,25', fmt(25) === '$0,25', fmt(25));
+    chequear('fmt(150) es $1,50', fmt(150) === '$1,50', fmt(150));
+    chequear('chipUrl(100)', chipUrl(100) === 'assets/chips/chip_1.png', chipUrl(100));
+    chequear('chipUrl(25)', chipUrl(25) === 'assets/chips/chip_0.25.png', chipUrl(25));
+    const b = breakdown(1275); // $12,75
+    chequear('breakdown(1275) = 1x$10 + 2x$1 + 1x$0,50 + 1x$0,25',
+      JSON.stringify(b) === JSON.stringify([
+        { value: 1000, count: 1 }, { value: 100, count: 2 },
+        { value: 50, count: 1 }, { value: 25, count: 1 }]), JSON.stringify(b));
+
+    // rng.js
+    let suma = 0, fuera = 0;
+    for (let i = 0; i < 10000; i++) { const r = hostRng(); suma += r; if (r < 0 || r >= 1) fuera++; }
+    chequear('hostRng: 10000 números, todos en [0,1)', fuera === 0);
+    chequear('hostRng: promedio cerca de 0,5', Math.abs(suma / 10000 - 0.5) < 0.02, (suma / 10000).toFixed(4));
+    const s1 = seededRng(123), s2 = seededRng(123);
+    chequear('seededRng: misma semilla, misma secuencia', s1() === s2() && s1() === s2());
+
+    // config.js: la cuota de cada día tiene que dar 1000, 1400, 1960, 2744, 3842, 5378 y 7530
+    const esperadas = [1000, 1400, 1960, 2744, 3842, 5378, 7530];
+    const calculadas = esperadas.map((_, i) =>
+      Math.round(CONFIG.quotaBase / 100 * Math.pow(CONFIG.quotaGrowth, i)));
+    chequear('Cuotas de los 7 días', JSON.stringify(calculadas) === JSON.stringify(esperadas), calculadas.join(', '));
+    chequear('Banco inicial $2.000', fmt(CONFIG.startBank) === '$2.000', fmt(CONFIG.startBank));
+    chequear('Supabase: URL cargada', CONFIG.supabase.url.startsWith('https://'), CONFIG.supabase.url);
+    chequear('Supabase: clave pública cargada', CONFIG.supabase.anonKey.startsWith('sb_publishable_') || CONFIG.supabase.anonKey.startsWith('eyJ'),
+      CONFIG.supabase.anonKey.slice(0, 15) + '...');
+
+    document.getElementById('salida').textContent = lineas.join('\n');
+  </script>
+</body>
+</html>

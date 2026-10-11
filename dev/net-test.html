@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prueba de red (Fase 2)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee; padding: 12px; margin: 0; }
+    input, button { font-size: 16px; padding: 8px; margin: 4px 0; }
+    button { background: #222; color: #eee; border: 1px solid #555; border-radius: 8px; min-height: 44px; margin-right: 4px; }
+    pre { font-size: 12px; white-space: pre-wrap; background: #1b1b1b; padding: 8px; border-radius: 8px; max-height: 260px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h2>Prueba de red (Fase 2)</h2>
+  <input id="nombre" placeholder="Tu nombre">
+  <input id="codigo" placeholder="Código (4 letras)" maxlength="4">
+  <div>
+    <button id="crear">Crear sala</button>
+    <button id="unirse">Unirse</button>
+    <button id="salir">Salir</button>
+  </div>
+  <div>
+    <button id="iniciar">Iniciar partida (anfitrión)</button>
+    <button id="dia10">Día de 10 s (lobby)</button>
+  </div>
+  <div>
+    <button id="sentar">Sentarse en "dummy"</button>
+    <button id="parar">Pararse</button>
+    <button id="apostar">Apostar $1 a cara</button>
+    <button id="apostarBig">Apostar $5.000 a cara</button>
+  </div>
+  <h3>Registro</h3>
+  <pre id="log"></pre>
+  <h3>Estado (RoomState)</h3>
+  <pre id="estado">sin sala</pre>
+
+  <script type="module">
+    // dev/net-test.html: prueba la sesión con dos pestañas. Abrir desde un servidor local, no con doble clic.
+    import { session } from '../js/net/session.js';
+    import * as dummy from './dummy-game.js';
+
+    session.setGameLoader(async () => ({ dummy: { logic: async () => dummy } }));
+
+    const $ = (id) => document.getElementById(id);
+    const log = (t) => { $('log').textContent = new Date().toLocaleTimeString() + '  ' + t + '\n' + $('log').textContent; };
+    const nombre = () => $('nombre').value.trim() || 'Prueba';
+
+    session.on('state', (s) => { $('estado').textContent = s ? JSON.stringify(s, null, 2) : 'sin sala'; });
+    session.on('toast', (t) => log(`[${t.kind}] ${t.text}`));
+    session.on('connection', (c) => log('conexión: ' + c));
+    session.on('tableEvent', (e) => log(`evento ${e.gameId}/${e.name}: ${JSON.stringify(e.data)}`));
+
+    async function run(label, fn) {
+      try {
+        const r = await fn();
+        log(`${label}: ${r && r.ok === false ? 'ERROR ' + r.error : 'ok'}`);
+      } catch (e) {
+        log(`${label}: EXCEPCIÓN ${e.code || ''} ${e.message}`);
+      }
+    }
+
+    $('crear').onclick = () => run('crear sala', async () => {
+      const r = await session.createRoom(nombre());
+      $('codigo').value = r.roomCode;
+      log('código de sala: ' + r.roomCode);
+    });
+    $('unirse').onclick = () => run('unirse', () => session.joinRoom($('codigo').value, nombre()));
+    $('salir').onclick = () => run('salir', () => session.leaveRoom());
+    $('iniciar').onclick = () => run('iniciar', () => session.startGame());
+    $('dia10').onclick = () => run('día de 10 s', () => session.setDayLength(10000));
+    $('sentar').onclick = () => run('sentarse', () => session.sitAt('dummy'));
+    $('parar').onclick = () => run('pararse', () => session.standUp());
+    $('apostar').onclick = () => run('apostar $1', () => session.sendGameAction('dummy', { type: 'bet', side: 'cara', amount: 100 }));
+    $('apostarBig').onclick = () => run('apostar $5.000', () => session.sendGameAction('dummy', { type: 'bet', side: 'cara', amount: 500000 }));
+  </script>
+</body>
+</html>
