@@ -10,6 +10,7 @@ export function createHistory(supabase, roomCode) {
   const runs = new Map();  // runId -> { id, startedAt, saved, end, endSaved }
   let queue = [];          // filas de events esperando
   let busy = false, again = false;
+  let lastError = null;   // último error de la base, para mostrarlo en la pantalla de prueba
   const timer = setInterval(flush, EVERY_MS);
 
   function onLog(row) {
@@ -36,15 +37,17 @@ export function createHistory(supabase, roomCode) {
       for (const row of rows) await sendRows([row]);
       return true;
     }
+    lastError = 'eventos: ' + error.message;
     console.warn('[history] no pude guardar eventos, reintento luego:', error.message);
     return false;
   }
 
   async function step() {
+    lastError = null;
     for (const r of runs.values()) {
       if (r.saved) continue;
       const { error } = await supabase.from('runs').insert({ id: r.id, room_code: roomCode, started_at: r.startedAt });
-      if (error) { console.warn('[history] no pude guardar la partida, reintento luego:', error.message); return; }
+      if (error) { lastError = 'partida: ' + error.message; console.warn('[history] no pude guardar la partida, reintento luego:', error.message); return; }
       r.saved = true;
     }
     while (queue.length) {
@@ -59,7 +62,7 @@ export function createHistory(supabase, roomCode) {
         const { error } = await supabase.from('runs').update({
           ended_at: r.end.endedAt, result: r.end.result, days_survived: r.end.daysSurvived, final_bank: r.end.finalBank,
         }).eq('id', id);
-        if (error) { console.warn('[history] no pude cerrar la partida, reintento luego:', error.message); return; }
+        if (error) { lastError = 'cierre: ' + error.message; console.warn('[history] no pude cerrar la partida, reintento luego:', error.message); return; }
         r.endSaved = true;
       }
       if (r.endSaved && !queue.some(e => e.runId === id)) runs.delete(id);
@@ -83,5 +86,14 @@ export function createHistory(supabase, roomCode) {
     await flush();
   }
 
-  return { onLog, onRun, flush, close };
+  // Estado para la pantalla: cuántos eventos esperan, cuántas partidas faltan guardar y el último error.
+  function status() {
+    return {
+      eventosPendientes: queue.length,
+      partidasSinGuardar: [...runs.values()].filter(r => !r.saved || (r.end && !r.endSaved)).length,
+      ultimoError: lastError,
+    };
+  }
+
+  return { onLog, onRun, flush, close, status };
 }

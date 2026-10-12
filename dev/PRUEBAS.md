@@ -37,6 +37,7 @@ Todavía no se puede probar: la tienda y la votación son la **Fase 4**.
 Abrí `dev/base-test.html`: la línea "Cuotas de los 7 días" tiene que mostrar `1000, 1400, 1960, 2744, 3842, 5378, 7530` con ✅.
 
 ## 8. Estadísticas, títulos e historial (fase 3)
+0. **Importante:** entre días hay una TIENDA de 60 segundos en la que NO se puede apostar. La página muestra la cuenta regresiva: esperá a que diga "Día en curso" para volver a sentarte y apostar.
 1. Con dos jugadores sentados, apostá varias veces con **Apostar $1 a cara**. En la tabla mirá: *Apostó*, *Neto* (verde si ganó, rojo si perdió), *Racha*, *Mejor* y *Peor*.
 2. Tiene que aparecer 🏆 **Mayor ganador** (el de mayor neto positivo) y 🐑 **Oveja negra** (el de menor neto negativo). Si todos están en cero, aparecen con "—".
 3. Al terminar el día, el resumen dice cuánto cambió el banco jugando ese día y quién ganó o perdió más.

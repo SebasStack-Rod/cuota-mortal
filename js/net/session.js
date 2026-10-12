@@ -34,6 +34,8 @@ let connection = 'offline', reopening = false, resolveSub = null;
 let minDelay = Infinity;               // para estimar la hora del anfitrión
 let patchTimer = null, fullTimer = null, tickTimer = null, hostGoneTimer = null;
 let pendingJoin = null;
+// El anfitrión guarda su estado en host.state; los demás, en state. Esta función devuelve el correcto.
+const current = () => (host ? host.state : state);
 const pendingReqs = new Map();
 const listeners = new Map();
 
@@ -374,8 +376,9 @@ export const session = {
   createRoom,
   joinRoom,
   leaveRoom,
-  getState: () => state,
-  me: () => (me ? { id: me.id, name: me.name, color: state?.players[me.id]?.color ?? null } : null),
+  getState: () => current(),
+  me: () => (me ? { id: me.id, name: me.name, color: current()?.players[me.id]?.color ?? null } : null),
+  historyStatus: () => (history ? history.status() : null),
   isHost: () => !!host,
   serverNow,
   on(event, cb) {
