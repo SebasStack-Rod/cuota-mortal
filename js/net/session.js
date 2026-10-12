@@ -3,6 +3,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.104.0/+esm';
 import { CONFIG } from '../config.js';
 import { createHost } from '../core/host.js';
+import { createHistory } from './history.js';
 
 const supabase = createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey, {
   auth: { persistSession: false }, // sin login: cada jugador entra como anónimo
@@ -27,7 +28,7 @@ const MENSAJES = {
 };
 
 let gameLoader = defaultGameLoader;
-let channel = null, roomCode = null, me = null, host = null;
+let channel = null, roomCode = null, me = null, host = null, history = null;
 let state = null, lastSeq = 0, lastSent = {};
 let connection = 'offline', reopening = false, resolveSub = null;
 let minDelay = Infinity;               // para estimar la hora del anfitrión
@@ -115,7 +116,10 @@ function scheduleFlush(immediate) {
   if (immediate) return flushPatch();
   if (!patchTimer) patchTimer = setTimeout(flushPatch, PATCH_EVERY_MS);
 }
-const hostChanged = (immediate) => scheduleFlush(immediate);
+const hostChanged = (phaseChanged) => {
+  scheduleFlush(phaseChanged);                          // los cambios de fase salen al instante
+  if (phaseChanged && history) history.flush();         // y también se manda el historial pendiente
+};
 function onHostTableEvent(ev) {
   send('table_event', ev);
   if (ev.to.includes(me.id)) emit('tableEvent', { gameId: ev.gameId, name: ev.name, data: ev.data });
@@ -255,17 +259,34 @@ function request(body) {
   });
 }
 
+// ---------- reloj del anfitrión ----------
+// Llama a host.tick() cada 100 ms corrigiendo la deriva: cada vuelta calcula cuánto falta para la próxima.
+function runTickLoop() {
+  let next = Date.now() + 100;
+  const loop = () => {
+    if (!host) return;
+    host.tick();
+    next += 100;
+    const ahora = Date.now();
+    if (next < ahora - 1000) next = ahora + 100;   // la pestaña estuvo dormida: no acumular vueltas
+    tickTimer = setTimeout(loop, Math.max(0, next - ahora));
+  };
+  tickTimer = setTimeout(loop, 100);
+}
+
 // ---------- entrar y salir ----------
 async function enterAsHost(code, name) {
   me = { id: newId(), name, color: null };
   roomCode = code;
   saveIdentity({ id: me.id, name, roomCode: code });
-  host = createHost({ roomCode: code, hostId: me.id, onChange: hostChanged, onTableEvent: onHostTableEvent });
+  history = createHistory(supabase, code);
+  host = createHost({ roomCode: code, hostId: me.id, onChange: hostChanged, onTableEvent: onHostTableEvent,
+    onLog: history.onLog, onRun: history.onRun });
   host.intent(me.id, { type: 'join', name });
   channel = openChannel(code);
   await withTimeout(subscribe(channel), CONNECT_TIMEOUT_MS, 'sin_red');
   await channel.track({ name, isHost: true });
-  tickTimer = setInterval(() => host && host.tick(), 100);
+  runTickLoop();
   fullTimer = setInterval(sendFull, FULL_EVERY_MS);
   sendFull();
   emit('state', host.state, Object.keys(host.state));
@@ -312,9 +333,14 @@ async function joinRoom(code, name) {
 }
 
 async function leaveRoom() {
-  clearInterval(tickTimer); clearInterval(fullTimer);
+  clearTimeout(tickTimer); clearInterval(fullTimer);
   clearTimeout(patchTimer); clearTimeout(hostGoneTimer);
   tickTimer = fullTimer = patchTimer = hostGoneTimer = null;
+  if (host) host.abandon();                    // si había partida en curso, queda como 'abandoned'
+  if (history) {                               // intenta guardar lo que falte, sin esperar más de 2 s
+    try { await Promise.race([history.close(), new Promise(r => setTimeout(r, 2000))]); } catch { /* sigue igual */ }
+  }
+  history = null;
   const ch = channel;
   channel = null; roomCode = null; host = null; state = null;
   lastSeq = 0; lastSent = {}; pendingJoin = null; minDelay = Infinity;
@@ -328,6 +354,7 @@ async function fetchRankings() {
   const [pl, runs] = await Promise.all([
     supabase.from('rankings_players').select('player_name, net_total').order('net_total', { ascending: false }),
     supabase.from('runs').select('room_code, days_survived, final_bank, ended_at')
+      .in('result', ['victory', 'gameover'])   // solo partidas terminadas
       .order('days_survived', { ascending: false }).order('final_bank', { ascending: false }).limit(5),
   ]);
   if (pl.error) throw pl.error;

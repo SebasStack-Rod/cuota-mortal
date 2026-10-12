@@ -16,7 +16,8 @@ export function createGame({ rng, now, config, playerId }) {
       round += 1;
       const ref = `d${round}`;
       const flip = rng() < 0.5 ? 'cara' : 'ceca';
-      const win = flip === action.side;
+      // Solo para pruebas: testOutcome 'win' o 'lose' fuerza el resultado (no existe en los juegos reales).
+      const win = action.testOutcome ? action.testOutcome === 'win' : flip === action.side;
       const payout = win ? action.amount * 2 : 0;
       last = flip;
       const effects = [{ type: 'debit', playerId: pid, amount: action.amount, kind: 'bet', ref }];
