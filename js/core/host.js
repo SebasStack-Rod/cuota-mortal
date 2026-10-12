@@ -1,10 +1,11 @@
 // js/core/host.js: motor del anfitrión. Solo corre en el celular del anfitrión.
 // Exporta createHost y quotaFor. Maneja sala, asientos, mesas, banco, ciclo de días, cuota,
 // estadísticas, títulos, resumen del día y avisa del historial (onLog / onRun) para guardarlo en Supabase.
-// FASE 3: todavía falta la tienda con votación y los objetos (fase 4).
+// FASE 4: la tienda con votación y los 5 objetos viven en js/core/items.js; este archivo los conecta con el ciclo del día.
 import { CONFIG } from '../config.js';
 import { hostRng } from './rng.js';
 import { emptyStats, applyResult, computeTitles, buildSummary } from './stats.js';
+import { createItems } from './items.js';
 
 const COLORS = ['#FF4D5E', '#FFB020', '#F7E04B', '#2EE59D', '#22E6FF', '#6C8CFF', '#B26BFF', '#FF2BD6'];
 const RECONNECT_MS = 60000;   // 60 s para volver a entrar sin perder el lugar
@@ -22,7 +23,7 @@ const noTitles = () => ({ topWinner: null, blackSheep: null });
 
 // onLog(fila): cada movimiento para el historial. onRun({type:'start'|'end', ...}): abre y cierra la partida.
 export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hostRng,
-  onChange = () => {}, onTableEvent = () => {}, onLog = () => {}, onRun = () => {} }) {
+  onChange = () => {}, onTableEvent = () => {}, onLog = () => {}, onRun = () => {}, onToast = () => {} }) {
   // RoomState (contrato, sección 4). "settings" es un campo extra: la duración del día se ajusta en el lobby.
   const state = {
     seq: 0, roomCode, hostId, phase: 'lobby', day: 1, now: now(),
@@ -41,8 +42,8 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
 
   const seatedIds = (gameId) => Object.values(state.players).filter(p => p.seat === gameId).map(p => p.id);
   const names = () => Object.fromEntries(Object.values(state.players).map(p => [p.id, p.name]));
-  // Fase 4: acá items.js va a ajustar payoutMult (trébol) y rerolls (dados cargados).
-  const modifiersFor = (gameId) => ({ payoutMult: 1, rerolls: 0 });
+  const items = createItems({ state, now, log, toast: (t) => onToast(t) });
+  const modifiersFor = (gameId) => items.modifiersFor(gameId);
   const ctxFor = (gameId) => ({
     bank: state.bank, modifiers: modifiersFor(gameId), seats: seatedIds(gameId), names: names(),
   });
@@ -86,6 +87,7 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
     log('bet', { player: p, game: gameId, amount: d.stake, detail: { ref: d.ref, result: d.detail ?? null } });
     if (d.payout > 0) log('payout', { player: p, game: gameId, amount: d.payout, detail: { ref: d.ref, stake: d.stake, result: d.detail ?? null } });
     state.titles = computeTitles(state.players);
+    items.onBetResult(p, d.stake, d.payout, d.ref);   // seguro de deuda
   }
 
   // Aplica los efectos de un juego. Devuelve null si salió bien, o el código de error si no se aplicó nada.
@@ -106,6 +108,7 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
         // DECISIÓN: bet_result lo consume el anfitrión y no se reenvía a las vistas (el contrato llama
         // "los demás eventos" a los que sí llegan como tableEvent). Los demás avisos van solo a los de esa mesa.
         if (e.name === 'bet_result') { onBetResult(e.data || {}, gameId); continue; }
+        items.onGameEvent(gameId, e.name);   // dados cargados: reroll_used
         const solo = modules[gameId] && modules[gameId].meta.mode === 'solo';
         const to = solo && e.data && e.data.playerId ? [e.data.playerId] : seatedIds(gameId);
         onTableEvent({ gameId, name: e.name, data: e.data, to });
@@ -189,13 +192,14 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
 
   // ---------- ciclo de días ----------
   function startDay(t, day) {
+    const { extraMs, quotaMult } = items.onDayStart();   // reloj, trébol y soborno entran en juego
     state.day = day;
-    state.quota = quotaFor(day);
+    state.quota = Math.round((quotaFor(day) / 100) * quotaMult) * 100;   // pesos enteros, ya con el soborno
     state.phase = 'day';
     state.collect = null;
     state.summary = null;
     state.shopEndsAt = null;
-    state.dayEndsAt = t + state.settings.dayMs;
+    state.dayEndsAt = t + state.settings.dayMs + extraMs;
     dayStats = {};
     dayStartBank = state.bank;
     instances = {};
@@ -209,8 +213,8 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
     const bankBeforeQuota = state.bank;
     // DECISIÓN: bankDelta es lo que cambió el banco jugando ese día, SIN contar la cuota.
     state.summary = buildSummary(state.day, dayStats, state.players, bankBeforeQuota - dayStartBank);
-    const q = quotaFor(state.day);
-    state.quota = q;
+    const q = state.quota;   // ya trae el descuento del soborno, si lo hubo
+    items.onDayEnd();
     const paid = state.bank >= q;
     if (paid) state.bank -= q;
     // DECISIÓN: la cuota se registra siempre; detail.paid dice si se pudo cobrar.
@@ -243,12 +247,15 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
       if (err) console.warn('[host] los efectos de un tick no se aplicaron:', gameId, err);
     }
 
+    if (state.phase === 'shop') items.tick(t);   // vence la votación o cambió la gente conectada
+
     if (state.phase === 'day' && t >= state.dayEndsAt) {
       endDay(t);
     } else if (state.phase === 'collect' && t >= state.collect.endsAt) {
       if (collectNext === 'shop') { state.phase = 'shop'; state.shopEndsAt = t + CONFIG.shopMs; }
       else { state.phase = collectNext; finishRun(collectNext); }
     } else if (state.phase === 'shop' && t >= state.shopEndsAt) {
+      items.closeShop();
       startDay(t, state.day + 1);
     }
 
@@ -276,7 +283,8 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
         }
         break;
       case 'rematch': r = rematch(from); break;
-      case 'proposeItem': case 'vote': r = fail('pendiente_fase_4'); break;
+      case 'proposeItem': r = items.propose(from, body.itemId); break;
+      case 'vote': r = items.vote(from, body.voteId, body.yes); break;
       default: r = fail('accion_desconocida');
     }
     refreshTables();
@@ -292,6 +300,7 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
     state.bank = CONFIG.startBank;
     state.summary = null;
     state.titles = noTitles();
+    items.reset();
     runId = crypto.randomUUID();
     onRun({ type: 'start', runId, startedAt: new Date(now()).toISOString() });
     startDay(now(), 1);
@@ -314,6 +323,7 @@ export function createHost({ roomCode, hostId, now = () => Date.now(), rng = hos
     state.collect = null;
     state.summary = null;
     state.titles = noTitles();
+    items.reset();
     state.shopEndsAt = null;
     state.dayEndsAt = null;
     state.tables = {};

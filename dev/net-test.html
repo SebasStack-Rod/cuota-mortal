@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Prueba de red (Fase 3)</title>
+  <title>Prueba de red (Fase 4)</title>
   <style>
     body { font-family: system-ui, sans-serif; background: #111; color: #eee; padding: 12px; margin: 0; }
     input, button { font-size: 16px; padding: 8px; margin: 4px 0; }
@@ -15,7 +15,7 @@
   </style>
 </head>
 <body>
-  <h2>Prueba de red (Fase 3)</h2>
+  <h2>Prueba de red (Fase 4) <small id="version" style="color:#888"></small></h2>
   <input id="nombre" placeholder="Tu nombre">
   <input id="codigo" placeholder="Código (4 letras)" maxlength="4">
   <div>
@@ -36,6 +36,13 @@
     <button id="apostarBig">Apostar $5.000 a cara</button>
     <button id="banco1">Dejar el banco en $1 (prueba)</button>
     <button id="rank">Ver rankings</button>
+    <button id="diag">Diagnóstico de Supabase</button>
+  </div>
+  <div id="tienda">
+    <b>Tienda</b> (solo se puede en la fase "Tienda", entre días):
+    <div id="botonesTienda"></div>
+    <button id="votoSi">Votar SÍ</button>
+    <button id="votoNo">Votar NO</button>
   </div>
   <div id="resumen" class="caja">Sin sala</div>
   <div id="rankings" class="caja" style="display:none"></div>
@@ -50,6 +57,7 @@
     import { session } from '../js/net/session.js';
     import * as dummy from './dummy-game.js';
     import { fmt } from '../js/core/money.js';
+    import { CONFIG } from '../js/config.js';
 
     session.setGameLoader(async () => ({ dummy: { logic: async () => dummy } }));
 
@@ -86,6 +94,14 @@
         const m = s.summary;
         html += `<br>Resumen del día ${m.day}: el banco cambió ${fmt(m.bankDelta)} jugando · ganó más: ${quien(m.topWinner)} · perdió más: ${quien(m.blackSheep)}`;
       }
+      const inv = Object.entries(s.inventory).filter(([, n]) => n > 0).map(([id, n]) => `${esc(CONFIG.items[id].label)} ×${n}`).join(', ') || 'nada';
+      html += `<br>🎒 Inventario: ${inv}`;
+      if (s.effects.length) html += ` · ✨ Efectos de hoy: ${s.effects.map((e) => esc(e.label)).join(', ')}`;
+      if (s.vote) {
+        const v = s.vote;
+        const falta = Math.max(0, Math.ceil((v.endsAt - session.serverNow()) / 1000));
+        html += `<br>🗳️ <b>Votación abierta:</b> comprar ${esc(CONFIG.items[v.itemId].label)} por ${fmt(v.price)} · sí ${v.yes.length} · no ${v.no.length} · cierra en ${falta} s (la propuso ${quien(v.proposedBy)})`;
+      }
       return html;
     }
 
@@ -104,11 +120,16 @@
     // La cuenta regresiva de la tienda y del día se actualiza cada segundo.
     setInterval(() => { if (ultimoEstado) $('resumen').innerHTML = resumen(ultimoEstado); }, 1000);
     // Estado del guardado en Supabase, cada 2 segundos.
+    $('version').textContent = 'versión ' + session.version;
     setInterval(() => {
-      const h = session.historyStatus();
-      $('guardado').textContent = h
-        ? `Guardado en la base: ${h.eventosPendientes} eventos esperando · ${h.partidasSinGuardar} partidas sin guardar` + (h.ultimoError ? ' · ERROR: ' + h.ultimoError : ' · sin errores')
-        : 'Guardado en la base: — (no sos anfitrión)';
+      try {
+        const h = session.historyStatus();
+        $('guardado').textContent = h
+          ? `Guardado en la base: ${h.eventosPendientes} eventos esperando · ${h.partidasSinGuardar} partidas sin guardar` + (h.ultimoError ? ' · ERROR: ' + h.ultimoError : ' · sin errores')
+          : 'Guardado en la base: — (no sos anfitrión)';
+      } catch (e) {
+        $('guardado').textContent = 'Guardado en la base: ERROR de la página: ' + e.message;
+      }
     }, 2000);
 
     session.on('toast', (t) => log(`[${t.kind}] ${t.text}`));
@@ -117,6 +138,11 @@
 
     const AYUDA = {
       solo_anfitrion: 'ese botón es solo para el anfitrión (quien creó la sala)',
+      votacion_abierta: 'ya hay una votación abierta: votá SÍ o NO',
+      ya_lo_tenes: 'ese objeto ya está en el inventario (máximo uno de cada uno)',
+      ya_voto: 'ya votaste en esta votación',
+      sin_votacion: 'no hay ninguna votación abierta',
+      objeto_inexistente: 'ese objeto no existe',
       no_sentado: 'primero tocá "Sentarse"',
       sin_fondos: 'el banco no alcanza para esa apuesta',
       juego_inexistente: 'ese juego no está cargado',
@@ -187,6 +213,22 @@
       return apuesta(b - 100, 'lose');   // pierde a propósito (solo el juego de prueba lo permite)
     });
     $('rank').onclick = () => mostrarRankings();
+    for (const [id, it] of Object.entries(CONFIG.items)) {
+      const b = document.createElement('button');
+      b.textContent = `Proponer: ${it.label} (${fmt(it.price)})`;
+      b.onclick = () => run('proponer ' + it.label, () => session.proposeItem(id));
+      $('botonesTienda').appendChild(b);
+    }
+    $('votoSi').onclick = () => run('votar sí', () => session.vote(session.getState()?.vote?.id, true));
+    $('votoNo').onclick = () => run('votar no', () => session.vote(session.getState()?.vote?.id, false));
+    $('diag').onclick = async () => {
+      try {
+        const d = await session.diagnosticar();
+        log('DIAGNÓSTICO: ' + JSON.stringify(d, null, 2));
+      } catch (e) {
+        log('DIAGNÓSTICO: EXCEPCIÓN ' + e.message);
+      }
+    };
   </script>
 </body>
 </html>

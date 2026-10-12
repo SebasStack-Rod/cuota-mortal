@@ -5,6 +5,8 @@ import { CONFIG } from '../config.js';
 import { createHost } from '../core/host.js';
 import { createHistory } from './history.js';
 
+export const VERSION = 'fase4-v1';
+
 const supabase = createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey, {
   auth: { persistSession: false }, // sin login: cada jugador entra como anónimo
 });
@@ -122,6 +124,8 @@ const hostChanged = (phaseChanged) => {
   scheduleFlush(phaseChanged);                          // los cambios de fase salen al instante
   if (phaseChanged && history) history.flush();         // y también se manda el historial pendiente
 };
+// Avisos para todos (compras, seguro, etc.): se envían a los demás y se muestran también en el celular del anfitrión.
+function onHostToast(t) { send('toast', t); emit('toast', t); }
 function onHostTableEvent(ev) {
   send('table_event', ev);
   if (ev.to.includes(me.id)) emit('tableEvent', { gameId: ev.gameId, name: ev.name, data: ev.data });
@@ -197,6 +201,7 @@ function openChannel(code) {
   ch.on('broadcast', { event: 'table_event' }, ({ payload }) => {
     if (!host && payload.to.includes(me.id)) emit('tableEvent', { gameId: payload.gameId, name: payload.name, data: payload.data });
   });
+  ch.on('broadcast', { event: 'toast' }, ({ payload }) => { if (!host) emit('toast', payload); });
   ch.on('presence', { event: 'sync' }, onPresenceSync);
   return ch;
 }
@@ -283,7 +288,7 @@ async function enterAsHost(code, name) {
   saveIdentity({ id: me.id, name, roomCode: code });
   history = createHistory(supabase, code);
   host = createHost({ roomCode: code, hostId: me.id, onChange: hostChanged, onTableEvent: onHostTableEvent,
-    onLog: history.onLog, onRun: history.onRun });
+    onLog: history.onLog, onRun: history.onRun, onToast: onHostToast });
   host.intent(me.id, { type: 'join', name });
   channel = openChannel(code);
   await withTimeout(subscribe(channel), CONNECT_TIMEOUT_MS, 'sin_red');
@@ -371,6 +376,25 @@ async function fetchRankings() {
   };
 }
 
+// ---------- diagnóstico ----------
+// Escribe una partida de prueba (queda como 'abandoned', así no entra en los rankings) y cuenta lo guardado.
+async function diagnosticar() {
+  const out = { version: VERSION, sala: roomCode, soyAnfitrion: !!host };
+  if (!host) return { ...out, nota: 'Solo el anfitrión guarda el historial. Creá la sala desde esta pestaña.' };
+  const msg = (e) => (e ? 'ERROR: ' + e.message + (e.code ? ' (código ' + e.code + ')' : '') : 'ok');
+  const prueba = await supabase.from('runs').insert({
+    id: crypto.randomUUID(), room_code: roomCode, started_at: new Date().toISOString(),
+    result: 'abandoned', days_survived: 0,
+  });
+  out.escribirPartidaDePrueba = msg(prueba.error);
+  const r = await supabase.from('runs').select('id', { count: 'exact', head: true });
+  out.partidasEnLaBase = r.error ? msg(r.error) : r.count;
+  const e = await supabase.from('events').select('id', { count: 'exact', head: true });
+  out.eventosEnLaBase = e.error ? msg(e.error) : e.count;
+  out.historialEnEsteCelular = history ? history.status() : null;
+  return out;
+}
+
 // ---------- API pública (sección 5 del contrato) ----------
 export const session = {
   createRoom,
@@ -399,6 +423,8 @@ export const session = {
   vote: (voteId, yes) => request({ type: 'vote', voteId, yes }),
   rematch: () => request({ type: 'rematch' }),
   fetchRankings,
+  diagnosticar,
+  version: VERSION,
   // Solo para pruebas: permite cambiar de dónde salen los juegos mientras no existe js/games/registry.js.
   setGameLoader(fn) { gameLoader = fn; },
 };

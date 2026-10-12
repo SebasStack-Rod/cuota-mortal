@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chequeo de archivos subidos</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee; padding: 14px; }
+    li { margin: 6px 0; font-size: 16px; line-height: 1.4; }
+    .caja { background: #1b1b1b; padding: 10px; border-radius: 10px; margin: 10px 0; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h2>Chequeo de archivos subidos (fase 4)</h2>
+  <p>Esta página mira, archivo por archivo, si lo que está publicado en GitHub Pages es la versión nueva.</p>
+  <div id="veredicto" class="caja">Revisando...</div>
+  <ul id="lista"></ul>
+
+  <script type="module">
+    // dev/version-check.html: dice qué archivos están viejos, faltan o quedaron en el lugar equivocado. Solo para desarrollo.
+    // "marca" es un texto que solo existe en la versión nueva del archivo.
+    const ARCHIVOS = [
+      { ruta: 'js/config.js', marca: 'quotaGrowth' },
+      { ruta: 'js/core/money.js', marca: 'breakdown' },
+      { ruta: 'js/core/rng.js', marca: 'seededRng' },
+      { ruta: 'js/core/stats.js', marca: 'computeTitles' },
+      { ruta: 'js/core/items.js', marca: 'createItems' },
+      { ruta: 'js/core/host.js', marca: 'createItems' },
+      { ruta: 'js/net/history.js', marca: 'createHistory' },
+      { ruta: 'js/net/session.js', marca: 'fase4-v1' },
+      { ruta: 'dev/dummy-game.js', marca: 'testOutcome' },
+      { ruta: 'dev/net-test.html', marca: 'botonesTienda' },
+    ];
+    const base = new URL('../', import.meta.url);
+    const bust = '?v=' + Date.now();   // evita que el navegador muestre una copia vieja
+
+    const li = (txt) => { const e = document.createElement('li'); e.innerHTML = txt; document.getElementById('lista').appendChild(e); };
+    let malos = 0;
+
+    for (const a of ARCHIVOS) {
+      const nombre = a.ruta.split('/').pop();
+      const carpeta = a.ruta.includes('/') ? a.ruta.slice(0, a.ruta.lastIndexOf('/')) : '(raíz)';
+      try {
+        const r = await fetch(new URL(a.ruta + bust, base), { cache: 'no-store' });
+        if (!r.ok) {
+          malos++;
+          li(`❌ <b>${a.ruta}</b>: NO EXISTE en el sitio. Subilo dentro de la carpeta <b>${carpeta}</b>.`);
+          // ¿quedó en la raíz del repositorio por error?
+          const raiz = await fetch(new URL(nombre + bust, base), { cache: 'no-store' });
+          if (raiz.ok) li(`⚠️ Encontré <b>${nombre}</b> suelto en la raíz del repositorio: se subió al lugar equivocado. Borralo de ahí.`);
+          continue;
+        }
+        const txt = await r.text();
+        if (txt.includes(a.marca)) li(`✅ <b>${a.ruta}</b>: versión nueva`);
+        else { malos++; li(`❌ <b>${a.ruta}</b>: es una versión VIEJA. Volvé a subirlo y esperá un minuto.`); }
+      } catch (e) {
+        malos++;
+        li(`❌ <b>${a.ruta}</b>: no pude leerlo (${e.message})`);
+      }
+    }
+    document.getElementById('veredicto').textContent = malos === 0
+      ? '✅ Todo está actualizado. Ya podés probar con net-test.html.'
+      : `❌ Hay ${malos} archivo(s) para corregir (mirá la lista de abajo).`;
+  </script>
+</body>
+</html>

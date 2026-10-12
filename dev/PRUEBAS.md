@@ -27,7 +27,12 @@ Orden importante: **"Día de 10 s" se toca en el lobby, ANTES de "Iniciar partid
 - **Insuficiente:** sentate, tocá **Dejar el banco en $1 (prueba)** y esperá el fin del día. Esperado: "IMPAGA", después **GAME OVER**. Después, **Revancha** (anfitrión) vuelve al lobby con los mismos jugadores.
 
 ## 5. Compra por votación (con 1 jugador, con 3 jugadores y con empate)
-Todavía no se puede probar: la tienda y la votación son la **Fase 4**.
+Entre días hay una **Tienda de 60 segundos**. Para llegar rápido: **Día de 10 s** → **Iniciar partida** → esperá el cobro. Después usá los botones "Proponer: ...".
+- **1 jugador:** sala sola, proponé "Seguro de deuda". Se aprueba al instante y el banco baja $400 (de $1.000 a $600). En el inventario aparece "Seguro de deuda ×1".
+- **3 jugadores** (tres pestañas, o dos más el celular): uno propone "Reloj robado". Aparece la votación con 1 sí. Cuando vota SÍ el segundo jugador (más de la mitad), se aprueba antes de tiempo. Si nadie más vota, se aprueba solo a los 15 segundos (1 sí contra 0 no).
+- **Empate:** con 2 jugadores, uno propone y el otro vota NO. Resultado: "Se rechazó la compra" y el banco no cambia.
+- Solo hay una votación a la vez, y un mismo jugador no puede votar dos veces.
+- **Efectos:** el Seguro devuelve el 50% de la primera pérdida del día (avisa con un mensaje); el Reloj alarga el día siguiente 60 s; el Soborno baja la próxima cuota 15% (de $1.400 a $1.190); el Trébol y los Dados cargados necesitan los juegos reales de la IA 3 (ruleta y dados), así que se prueban más adelante.
 
 ## 6. Se cierra el anfitrión
 1. Con A (anfitrión) y B en la sala, cerrá la pestaña A o tocá **Salir** en A.
