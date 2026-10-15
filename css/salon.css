@@ -1,0 +1,56 @@
+/* css/salon.css
+   Salón del casino (escena de píxeles + carteles de neón + zonas tocables), pantalla de mesa, hoja inferior
+   y vista provisoria de juego. Usa las variables de css/theme.css. */
+
+/* ---------- Salón ---------- */
+.screen--salon { gap: 6px; }
+.salon-hint { text-align: center; font: 500 14px/1.2 var(--font-body); color: var(--text-dim); }
+.salon-area { flex: 1; min-height: 0; margin: 0 -16px; display: flex; align-items: center; justify-content: center; }
+.salon-stage { --s: 2; position: relative; flex: none; width: 352px; height: 512px; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 2px var(--gold-dim), 0 10px 30px rgba(0, 0, 0, 0.5); }
+.salon-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.salon-zones { position: absolute; inset: 0; }
+
+.zone {
+  position: absolute; padding: 0; border: 0; border-radius: 6px; background: transparent;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+}
+.zone:active { background: rgba(255, 255, 255, 0.14); }
+.zone:focus-visible { outline: 3px solid var(--neon-cyan); outline-offset: -3px; }
+.zone__sign {
+  margin-top: calc(var(--s) * 2); max-width: 96%; padding: calc(var(--s) * 1) calc(var(--s) * 3);
+  font: 400 calc(var(--s) * 6.5)/1.05 var(--font-neon), Impact, sans-serif; letter-spacing: 0.04em; text-align: center;
+  color: #FFE0F8; background: rgba(11, 11, 20, 0.72); border-radius: calc(var(--s) * 3);
+  text-shadow: 0 0 3px #fff, 0 0 8px var(--neon-magenta), 0 0 18px var(--neon-magenta);
+}
+.zone[data-game="crash"] .zone__sign, .zone[data-game="blackjack"] .zone__sign, .zone[data-game="slots"] .zone__sign {
+  color: #DFFCFF; text-shadow: 0 0 3px #fff, 0 0 8px var(--neon-cyan), 0 0 18px var(--neon-cyan);
+}
+html[data-quality="baja"] .zone__sign { text-shadow: 0 0 6px currentColor; }
+.zone__dots { position: absolute; left: 0; right: 0; bottom: calc(var(--s) * 2); display: flex; flex-wrap: wrap; justify-content: center; gap: calc(var(--s) * 1.5); padding: 0 4px; }
+.zone__dot { display: inline-block; width: calc(var(--s) * 5); height: calc(var(--s) * 5); border-radius: 50%; box-shadow: 0 0 0 calc(var(--s) * 0.75) rgba(11, 11, 20, 0.8); }
+
+/* ---------- Mesa ---------- */
+.game-container { position: relative; flex: 1; min-height: 0; margin: 0 -16px; overflow: hidden; }
+.placeholder-view { height: 100%; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.placeholder-view__title { font: 400 24px/1.1 var(--font-title); color: var(--gold-light); text-transform: capitalize; }
+.placeholder-view__bet { min-height: 70px; display: flex; align-items: flex-end; }
+.placeholder-view__msg { min-height: 20px; font-size: 14px; color: var(--text); }
+.placeholder-view__state { flex: 1; min-height: 0; margin: 0; padding: 8px; overflow: hidden; border-radius: 10px; background: rgba(245, 241, 230, 0.05); font: 12px/1.3 ui-monospace, monospace; color: var(--text-dim); white-space: pre-wrap; }
+
+/* ---------- Hoja inferior ---------- */
+.sheet-root { position: absolute; inset: 0; z-index: 70; }
+.sheet-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); opacity: 0; transition: opacity 0.2s; }
+.sheet-backdrop.is-open { opacity: 1; }
+.sheet {
+  position: absolute; left: 10px; right: 10px; bottom: calc(var(--safe-bottom) + 10px); max-height: 80%;
+  display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+  transform: translateY(110%); transition: transform 0.25s var(--ease-out);
+}
+.sheet.is-open { transform: none; }
+.sheet__title { font: 400 24px/1.1 var(--font-title); color: var(--gold-light); }
+.sheet__body { min-height: 0; overflow-y: auto; font-size: 15px; display: flex; flex-direction: column; gap: 8px; }
+.sheet__actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.game-sheet { display: flex; flex-direction: column; gap: 8px; }
+.game-sheet__rules { color: var(--text-dim); font-size: 14px; }
+.game-sheet__players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.game-sheet__players .zone__dot { --s: 2; vertical-align: middle; margin-right: 4px; }

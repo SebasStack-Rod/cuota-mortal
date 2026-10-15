@@ -1,0 +1,266 @@
+/* css/ui.css
+   Estilos de la interfaz: contenedor de la app, gestor de pantallas, paneles con marco dorado,
+   botones, campos, cartel de neón y las pantallas de Inicio, Sala de espera, Ajustes y Créditos.
+   Usa las variables de css/theme.css. Pensado para pantalla vertical de 360x640 a 430x932. */
+
+/* ---------- Contenedor y pantallas ---------- */
+#app {
+  position: fixed; inset: 0;
+  width: 100%; max-width: 430px; margin: 0 auto;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 60% at 15% -10%, rgba(255, 43, 214, 0.22), transparent 60%),
+    radial-gradient(120% 60% at 95% 105%, rgba(34, 230, 255, 0.16), transparent 60%),
+    var(--bg);
+}
+@media (min-width: 431px) {
+  #app { box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.18), 0 0 90px rgba(255, 43, 214, 0.14); }
+}
+
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: calc(var(--safe-top) + 12px) 16px calc(var(--safe-bottom) + 12px);
+  overflow-x: hidden; overflow-y: auto;          /* con teclado abierto o pantalla baja, la pantalla se desplaza en vez de cortarse */
+  overscroll-behavior: contain;
+  opacity: 0; visibility: hidden; transform: translateY(10px);
+  transition: opacity 0.28s var(--ease-out), transform 0.28s var(--ease-out), visibility 0s linear 0.28s;
+}
+.screen.is-leaving { transform: translateY(-10px); }
+.screen.is-active {
+  opacity: 1; visibility: visible; transform: none;
+  transition-delay: 0s;
+}
+#app.no-anim .screen { transition: none; }
+
+.screen-title {
+  font: 400 28px/1.1 var(--font-title);
+  color: var(--gold-light);
+  letter-spacing: 0.02em;
+}
+.screen-back { margin-top: auto; }
+
+/* ---------- Paneles ---------- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+/* Marco ornamental de Kenney teñido de dorado (lo prepara js/ui/frames.js) */
+html.frames-ready .panel--framed {
+  border: 16px solid transparent;
+  border-image: var(--frame-gold) 16 / 16px / 0 stretch;
+  border-radius: 0;
+  padding: 0 2px;
+  image-rendering: pixelated;
+}
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.panel-title { font: 400 17px/1 var(--font-title); color: var(--gold-light); letter-spacing: 0.02em; }
+.panel-count { font: 500 14px/1 var(--font-body); color: var(--text-dim); }
+
+.field-label { font: 500 14px/1.2 var(--font-body); color: var(--text-dim); margin-bottom: 6px; }
+.hint { font-size: 13px; color: var(--text-dim); }
+
+/* ---------- Botones ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: var(--tap); padding: 0 18px;
+  border: 0; border-radius: 12px;
+  font: 400 17px/1 var(--font-title); letter-spacing: 0.03em;
+  color: var(--bg);
+  transition: transform 0.1s, filter 0.15s, box-shadow 0.1s;
+}
+.btn--block { width: 100%; }
+.btn--small { min-height: 44px; padding: 0 14px; font-size: 15px; }
+.btn--gold {
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  box-shadow: 0 3px 0 var(--gold-shadow), 0 8px 18px rgba(212, 175, 55, 0.22);
+}
+.btn--gold:active:not([disabled]) { transform: translateY(2px); box-shadow: 0 1px 0 var(--gold-shadow); }
+.btn--ghost { background: transparent; color: var(--gold-light); box-shadow: inset 0 0 0 2px var(--gold-dim); }
+.btn--ghost:active:not([disabled]) { background: rgba(212, 175, 55, 0.14); }
+.btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.btn[aria-busy="true"] { cursor: progress; }
+
+.btn-link {
+  min-height: var(--tap); padding: 0 14px;
+  background: none; border: 0;
+  font: 500 15px var(--font-body); color: var(--text-dim);
+  text-decoration: underline; text-underline-offset: 4px;
+}
+.btn-link:active { color: var(--gold-light); }
+
+/* ---------- Campos ---------- */
+.input {
+  width: 100%; min-height: var(--tap); padding: 0 14px;
+  background: #0D0D1A; border: 2px solid var(--line); border-radius: 10px;
+  font: 500 18px var(--font-body); color: var(--text);
+}
+.input::placeholder { color: rgba(169, 165, 154, 0.6); }
+.input:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 0 3px rgba(34, 230, 255, 0.25); }
+.input--code {
+  font: 400 22px/1 var(--font-title); letter-spacing: 0.32em; text-align: center;
+  text-transform: uppercase; padding-left: calc(14px + 0.32em);
+}
+
+/* ---------- Cartel de neón ---------- */
+.neon {
+  display: block; white-space: nowrap; text-align: center;
+  font-family: var(--font-neon), Impact, sans-serif; line-height: 1; letter-spacing: 0.03em;
+}
+.neon--cyan {
+  color: #DFFCFF;
+  text-shadow: 0 0 3px #fff, 0 0 10px var(--neon-cyan), 0 0 24px var(--neon-cyan), 0 0 48px rgba(34, 230, 255, 0.7);
+}
+.neon--magenta {
+  color: #FFE0F8;
+  text-shadow: 0 0 3px #fff, 0 0 10px var(--neon-magenta), 0 0 24px var(--neon-magenta), 0 0 48px rgba(255, 43, 214, 0.7);
+}
+/* El único momento animado de la entrada: el cartel se prende parpadeando */
+@keyframes neon-on {
+  0% { opacity: 0.06; } 7% { opacity: 1; } 11% { opacity: 0.12; } 19% { opacity: 1; }
+  24% { opacity: 0.3; } 31% { opacity: 1; } 36% { opacity: 0.7; } 42%, 100% { opacity: 1; }
+}
+.screen--home.is-active .neon--cyan { animation: neon-on 1.1s steps(1, end) 0.15s both; }
+.screen--home.is-active .neon--magenta { animation: neon-on 1.3s steps(1, end) 0.55s both; }
+html[data-quality="baja"] .neon { animation: none !important; }
+html[data-quality="baja"] .neon--cyan { text-shadow: 0 0 8px var(--neon-cyan); }
+html[data-quality="baja"] .neon--magenta { text-shadow: 0 0 8px var(--neon-magenta); }
+
+/* ---------- Pantalla: Inicio ---------- */
+/* El cartel ocupa el espacio libre y queda centrado: en pantallas altas no deja un hueco arriba del formulario */
+.sign { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+.sign .neon--cyan { font-size: clamp(40px, 15vw, 62px); }
+.sign .neon--magenta { font-size: clamp(40px, 15vw, 62px); margin-top: 4px; }
+.tagline { margin-top: 12px; text-align: center; font: 500 15px var(--font-body); color: var(--text-dim); }
+.chip-fan { display: flex; justify-content: center; margin-top: 14px; height: 58px; }
+.chip-fan img { width: 58px; height: 58px; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55)); }
+@media (min-height: 800px) {
+  .chip-fan { height: 84px; margin-top: 24px; }
+  .chip-fan img { width: 84px; height: 84px; }
+  .tagline { font-size: 17px; }
+}
+.chip-fan img:nth-child(1) { transform: rotate(-14deg) translateX(10px); }
+.chip-fan img:nth-child(2) { transform: translateY(-6px); z-index: 1; }
+.chip-fan img:nth-child(3) { transform: rotate(14deg) translateX(-10px); }
+
+.home-card { display: flex; flex-direction: column; gap: 10px; }
+.home-card .btn--gold { margin-top: 2px; }
+.or-line {
+  display: flex; align-items: center; gap: 10px; margin: 2px 0;
+  font-size: 13px; color: var(--text-dim);
+}
+.or-line::before, .or-line::after { content: ""; flex: 1; height: 1px; background: var(--gold-dim); }
+.join-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.form-error { min-height: 18px; font-size: 14px; color: var(--loss); }
+.home-links { display: flex; justify-content: center; gap: 8px; }
+
+/* ---------- Pantalla: Sala de espera ---------- */
+.code-card { text-align: center; }
+.room-code { font-size: clamp(44px, 17vw, 70px); letter-spacing: 0.08em; padding-left: 0.08em; }
+.code-actions { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+
+.players-panel { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; }
+/* Si algún día no entran los 8 jugadores, la lista tiene scroll interno en vez de cortarse */
+.players { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-height: 0; overflow-y: auto; }
+.player {
+  display: grid; grid-template-columns: 30px 1fr; column-gap: 10px; align-items: center;
+  min-height: 46px; padding: 6px 10px; min-width: 0;
+  background: rgba(245, 241, 230, 0.05); border: 1px solid transparent; border-radius: 10px;
+}
+.player.is-me { border-color: var(--gold-dim); }
+.player.is-off { opacity: 0.55; }
+.player__main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.player__name { font: 500 15px/1.1 var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player__you { color: var(--text-dim); font-weight: 400; }
+.player__tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag {
+  font: 500 11px/1 var(--font-body); padding: 3px 6px; border-radius: 6px;
+  background: rgba(245, 241, 230, 0.1); color: var(--text-dim);
+}
+.tag--gold { background: rgba(212, 175, 55, 0.22); color: var(--gold-light); }
+.tag--off { background: rgba(255, 77, 94, 0.18); color: var(--loss); }
+
+/* Ficha de color: el color del jugador, con borde de ficha */
+.swatch {
+  --c: #fff;
+  width: 30px; height: 30px; border-radius: 50%;
+  background:
+    radial-gradient(circle at center, var(--c) 0 52%, transparent 54%),
+    repeating-conic-gradient(var(--text) 0 14deg, var(--c) 14deg 45deg);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.players-panel .hint { margin-top: 8px; }
+
+.daylen .field-label { margin-bottom: 8px; }
+.daylen .hint { font-size: 15px; color: var(--text); }
+
+/* Selector de opciones en fila (duración del día, calidad) */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+.seg__btn {
+  min-height: 44px; padding: 0 6px;
+  background: rgba(245, 241, 230, 0.06); border: 2px solid transparent; border-radius: 10px;
+  font: 500 15px var(--font-body); color: var(--text);
+}
+.seg__btn[aria-pressed="true"] { background: var(--gold); border-color: var(--gold-light); color: var(--bg); font-weight: 700; }
+
+.lobby-foot { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: auto; align-items: stretch; }
+.lobby-foot .btn--gold { width: 100%; }
+.wait { display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 8px; font: 500 15px var(--font-body); color: var(--text-dim); }
+
+/* ---------- Ajustes ---------- */
+.settings-list { display: flex; flex-direction: column; gap: 4px; }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 4px; }
+.setting + .setting { border-top: 1px solid var(--line); }
+.setting--col { flex-direction: column; align-items: stretch; gap: 8px; }
+.setting__name { font: 500 16px/1.2 var(--font-body); display: flex; justify-content: space-between; }
+.setting__help { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+
+.switch {
+  flex: none; position: relative; width: 60px; height: 34px; padding: 0;
+  background: rgba(245, 241, 230, 0.16); border: 0; border-radius: 17px; transition: background 0.2s;
+}
+.switch__knob {
+  position: absolute; top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--text); transition: transform 0.2s var(--ease-out);
+}
+.switch[aria-checked="true"] { background: var(--gold); }
+.switch[aria-checked="true"] .switch__knob { transform: translateX(26px); background: var(--bg); }
+/* Zona táctil de 48 px aunque el interruptor mida 34 */
+.switch::after { content: ""; position: absolute; inset: -7px -4px; }
+
+.range { width: 100%; height: 44px; accent-color: var(--gold); }
+
+/* ---------- Créditos ---------- */
+.credits-body { flex: 1; min-height: 0; overflow-y: auto; font-size: 14px; color: var(--text-dim); }
+.credits-body p + p { margin-top: 12px; }
+.credits-body strong { color: var(--text); font-weight: 500; }
+
+/* ---------- Aviso de conexión ---------- */
+#conn-banner {
+  position: absolute; z-index: 50; left: 0; right: 0; top: var(--safe-top);
+  padding: 6px 12px; text-align: center; font: 500 13px var(--font-body);
+  background: #7A2A00; color: #FFE9D6;
+}
+#conn-banner[hidden] { display: none; }
+
+/* ---------- Pantallas bajas (360x640 con barras del navegador) ---------- */
+@media (max-height: 620px) {
+  .chip-fan { display: none; }
+  .tagline { margin-top: 8px; }
+  .room-code { font-size: clamp(40px, 15vw, 56px); }
+}
+
+/* ---------- Pulido (fase 6) ---------- */
+/* Calidad Baja: transiciones más cortas */
+html[data-quality="baja"] .screen { transition-duration: 0.12s, 0.12s, 0s; transition-delay: 0s, 0s, 0.12s; }
+html[data-quality="baja"] .screen.is-active { transition-delay: 0s; }
+/* Teclado virtual abierto: se esconden los adornos para que entren los campos */
+#app[data-keyboard="open"] .chip-fan,
+#app[data-keyboard="open"] .tagline,
+#app[data-keyboard="open"] .home-links { display: none; }
+#app[data-keyboard="open"] .neon { transform: scale(0.7); transform-origin: top center; margin-bottom: -20px; }
+/* Foco visible para quien navega con teclado */
+:where(button, [role="button"], a, input, [tabindex="0"]):focus-visible { outline: 3px solid var(--neon-cyan); outline-offset: 2px; }

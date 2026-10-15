@@ -1,0 +1,138 @@
+/* css/hud.css
+   Barra superior (banco, cuota, día, cronómetro), bandeja de fichas, barra inferior de la mesa, pilas de fichas,
+   fichas voladoras y avisos (toasts). Usa las variables de css/theme.css. */
+
+:root { --hud-h: 76px; --bar-h: 62px; --tray-h: 76px; }
+
+/* Las pantallas de juego dejan lugar para las barras fijas */
+.screen--game { padding-top: calc(var(--safe-top) + var(--hud-h) + 10px); }
+#app.has-seat .screen--game { padding-bottom: calc(var(--safe-bottom) + var(--bar-h) + var(--tray-h) + 10px); }
+
+/* ---------- Barra superior ---------- */
+.hud {
+  position: absolute; z-index: 40; top: 0; left: 0; right: 0;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+  padding: calc(var(--safe-top) + 8px) 14px 0;
+  height: calc(var(--safe-top) + var(--hud-h));
+  background: linear-gradient(180deg, rgba(11, 11, 20, 0.97) 70%, rgba(11, 11, 20, 0));
+}
+.hud__bank { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hud__stack { flex: none; min-width: 44px; height: 38px; display: flex; align-items: flex-end; }
+.hud__label { display: block; font-size: 12px; color: var(--text-dim); line-height: 1; }
+.hud__bankval { display: block; font: 400 19px/1.15 var(--font-title); color: var(--gold-light); font-variant-numeric: tabular-nums; }
+.hud__day { display: flex; flex-direction: column; align-items: center; gap: 2px; font: 500 13px/1 var(--font-body); color: var(--text-dim); }
+.hud__timer { font: 400 20px/1 var(--font-title); color: var(--text); font-variant-numeric: tabular-nums; }
+.hud__quota { text-align: right; }
+.hud__quotaval { display: block; font: 400 19px/1.15 var(--font-title); color: var(--text); font-variant-numeric: tabular-nums; }
+.hud__progress {
+  grid-column: 1 / -1; height: 7px; border-radius: 4px; overflow: hidden;
+  background: rgba(245, 241, 230, 0.14); margin-top: -2px;
+}
+.hud__fill { height: 100%; width: 0; background: var(--gold); border-radius: 4px; transition: width 0.5s var(--ease-out), background 0.3s; }
+.hud__fill.is-covered { background: var(--win); }
+
+@keyframes danger-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.hud__timer.is-danger { color: var(--loss); animation: danger-pulse 0.9s ease-in-out infinite; }
+.hud.is-danger .hud__fill { background: var(--loss); animation: danger-pulse 0.9s ease-in-out infinite; }
+
+/* ---------- Pilas de fichas ---------- */
+.chip-stack { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
+.chip-stack__cols { display: flex; align-items: flex-end; padding-left: 0.2em; }
+.chip-stack__col { position: relative; flex: none; }
+.chip-stack__col img { position: absolute; left: 0; width: 100%; height: auto; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.55)); }
+.chip-stack__more {
+  position: absolute; top: -6px; right: -4px; z-index: 2; padding: 2px 5px; border-radius: 8px;
+  font: 700 11px/1 var(--font-body); background: var(--bg); color: var(--gold-light); box-shadow: 0 0 0 1px var(--gold-dim);
+}
+.chip-stack__label { font: 400 14px/1 var(--font-title); color: var(--gold-light); font-variant-numeric: tabular-nums; }
+
+/* ---------- Fichas voladoras ---------- */
+#fx-layer { position: fixed; inset: 0; z-index: 80; pointer-events: none; overflow: hidden; }
+.fx-chip { position: absolute; left: 0; top: 0; width: 34px; height: 34px; will-change: transform; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.5)); }
+
+/* ---------- Bandeja de fichas ---------- */
+.tray {
+  position: absolute; z-index: 40; left: 0; right: 0; bottom: calc(var(--safe-bottom) + var(--bar-h));
+  height: var(--tray-h); padding-top: 8px;
+  background: linear-gradient(0deg, rgba(11, 11, 20, 0.97) 75%, rgba(11, 11, 20, 0));
+}
+.tray__scroll {
+  display: flex; align-items: flex-end; gap: 4px; height: 100%; padding: 0 14px 6px;
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.tray__scroll::-webkit-scrollbar { display: none; }
+.tray__chip {
+  flex: none; width: 56px; height: 56px; padding: 2px; border: 0; border-radius: 50%; background: none;
+  transition: transform 0.18s var(--ease-out), filter 0.18s, opacity 0.18s;
+}
+.tray__chip img { width: 100%; height: 100%; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); }
+.tray__chip.is-selected { transform: translateY(-10px) scale(1.1); filter: drop-shadow(0 0 8px var(--gold-light)); }
+.tray__chip.is-off { opacity: 0.28; filter: grayscale(0.8); cursor: not-allowed; }
+
+/* ---------- Barra inferior ---------- */
+.bar {
+  position: absolute; z-index: 41; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+  padding: 4px 8px calc(var(--safe-bottom) + 4px); height: calc(var(--safe-bottom) + var(--bar-h));
+  background: #0E0E1B; border-top: 1px solid var(--gold-dim);
+}
+.bar__btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  min-height: 48px; padding: 2px 2px; border: 0; border-radius: 10px; background: none;
+  font: 500 12px/1.1 var(--font-body); color: var(--text); text-align: center;
+}
+.bar__btn svg { width: 22px; height: 22px; stroke: var(--gold-light); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.bar__btn:active { background: rgba(212, 175, 55, 0.16); }
+
+/* ---------- Avisos ---------- */
+#toasts {
+  position: absolute; z-index: 60; left: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px;
+  bottom: calc(var(--safe-bottom) + 14px); pointer-events: none;
+}
+#app.has-seat #toasts { bottom: calc(var(--safe-bottom) + var(--bar-h) + var(--tray-h) + 8px); }
+.toast {
+  padding: 10px 14px; border-radius: 12px; font: 500 14px/1.25 var(--font-body);
+  background: var(--panel); border: 1px solid var(--gold-dim); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  animation: toast-in 0.25s var(--ease-out);
+}
+.toast--win { border-color: var(--win); color: var(--win); }
+.toast--loss { border-color: var(--loss); color: var(--loss); }
+.toast--warn { border-color: var(--gold); color: var(--gold-light); }
+.toast.is-leaving { opacity: 0; transform: translateY(6px); transition: opacity 0.25s, transform 0.25s; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* ---------- Apuesta libre: botón de monto y editor ---------- */
+.hud__limit { display: block; margin-top: 2px; font: 500 11px/1 var(--font-body); color: var(--text-dim); }
+.tray { display: flex; align-items: flex-end; }
+.tray__scroll { flex: 1; min-width: 0; padding-left: 4px; }
+.tray__amount {
+  flex: none; width: 82px; height: 60px; margin: 0 0 6px 10px; padding: 0 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: rgba(245, 241, 230, 0.06); border: 2px solid var(--gold-dim); border-radius: 12px;
+}
+.tray__amount[aria-expanded="true"] { border-color: var(--gold-light); background: rgba(212, 175, 55, 0.16); }
+.tray__amount-label { font: 500 11px/1 var(--font-body); color: var(--text-dim); }
+.tray__amount-value { font: 400 15px/1 var(--font-title); color: var(--gold-light); font-variant-numeric: tabular-nums; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+.bet-editor {
+  position: absolute; left: 10px; right: 10px; bottom: calc(100% + 4px); padding: 10px 12px;
+  background: #14141F; border: 1px solid var(--gold-dim); border-radius: var(--radius);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5);
+}
+.bet-editor__top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.bet-editor__amount { font: 400 24px/1.1 var(--font-title); color: var(--gold-light); font-variant-numeric: tabular-nums; }
+.bet-editor__row { display: grid; grid-template-columns: auto auto 1fr auto auto; gap: 6px; align-items: center; }
+.bet-editor__btn {
+  min-width: 48px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 10px;
+  background: rgba(245, 241, 230, 0.08); font: 500 15px var(--font-body); color: var(--text);
+}
+.bet-editor__btn:active { background: rgba(212, 175, 55, 0.25); }
+.bet-editor__input {
+  min-width: 0; min-height: 44px; padding: 0 8px; text-align: center; border-radius: 10px;
+  background: #0D0D1A; border: 2px solid var(--line); font: 500 16px var(--font-body); color: var(--text);
+}
+.bet-editor__input:focus { outline: none; border-color: var(--neon-cyan); }
+
+/* Los montos largos no se pisan con el cronómetro */
+.hud__bank > div:last-child { min-width: 0; }
+.hud__bankval, .hud__quotaval { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

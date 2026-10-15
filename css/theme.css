@@ -1,0 +1,74 @@
+/* css/theme.css
+   Variables del tema visual (sección 8 del contrato, NO se tocan) y la base del documento:
+   reseteo, tipografías y utilidades. Los componentes viven en css/ui.css.
+   Las fuentes (Monoton, Bungee, Rubik) se cargan desde Google Fonts en index.html. */
+
+:root {
+  --bg: #0B0B14; --felt: #0B6B3A; --felt-dark: #07431F;
+  --gold: #D4AF37; --gold-light: #F3D77A; --red: #B3201F;
+  --neon-magenta: #FF2BD6; --neon-cyan: #22E6FF;
+  --win: #2EE59D; --loss: #FF4D5E;
+  --text: #F5F1E6; --text-dim: #A9A59A; --panel: rgba(20, 20, 34, 0.86);
+  --radius: 14px;
+  --font-neon: 'Monoton', cursive; --font-title: 'Bungee', cursive; --font-body: 'Rubik', system-ui, sans-serif;
+}
+
+/* Extras de la interfaz (IA 2). No pisan nada del contrato. */
+:root {
+  --gold-dim: rgba(212, 175, 55, 0.45);
+  --gold-shadow: #8D7218;
+  --line: rgba(245, 241, 230, 0.14);
+  --tap: 48px;                                   /* alto mínimo de cualquier zona táctil */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;                              /* sin scroll de la página */
+  overscroll-behavior: none;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.35;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;                    /* sin zoom por doble toque */
+}
+
+/* El atributo hidden siempre gana, aunque el elemento tenga display propio */
+[hidden] { display: none !important; }
+
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+img { display: block; }
+h1, h2, h3, p { margin: 0; }
+
+/* Texto solo para lectores de pantalla */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Foco visible para quien usa teclado */
+:focus-visible { outline: 3px solid var(--neon-cyan); outline-offset: 2px; }
+[tabindex="-1"]:focus { outline: none; }
+
+/* Respeta prefers-reduced-motion: sin animaciones ni transiciones largas */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Pestaña oculta: se pausan las animaciones CSS (main.js pone la clase) */
+html.is-hidden *, html.is-hidden *::before, html.is-hidden *::after {
+  animation-play-state: paused !important;
+}
