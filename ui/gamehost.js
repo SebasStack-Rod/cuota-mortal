@@ -27,20 +27,56 @@ function adaptView(mod) {
   return null;
 }
 
-async function loadPlaceholder() {
+// Las vistas reales usan GSAP como global. Si el <script defer> del CDN todavía no terminó (o falló), se espera y se prueba con un CDN de respaldo.
+const GSAP_URLS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js',
+  'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js',
+];
+let gsapPromise = null;
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src; el.onload = resolve; el.onerror = () => { el.remove(); reject(new Error('no cargó ' + src)); };
+    document.head.appendChild(el);
+  });
+}
+function ensureGsap() {
+  if (window.gsap) return Promise.resolve(true);
+  if (!gsapPromise) {
+    gsapPromise = (async () => {
+      // 1) esperar un momento al <script> original de index.html
+      for (let i = 0; i < 20 && !window.gsap; i++) await new Promise((r) => setTimeout(r, 100));
+      // 2) CDNs de respaldo
+      for (const url of GSAP_URLS) {
+        if (window.gsap) break;
+        try { await loadScript(url); } catch (err) { console.warn('[gamehost]', err.message); }
+      }
+      if (!window.gsap) gsapPromise = null;   // permitir reintento en el próximo montaje
+      return !!window.gsap;
+    })();
+  }
+  return gsapPromise;
+}
+
+let lastFallbackReason = '';
+
+async function loadPlaceholder(reason) {
+  lastFallbackReason = reason ? String((reason && reason.message) || reason) : '';
   return (await import('./placeholder-view.js')).default;
 }
 
 async function loadView(gameId) {
   try {
+    if (!(await ensureGsap())) throw new Error('GSAP (window.gsap) no se pudo cargar: revisá la conexión o el bloqueador de contenido');
     const view = adaptView(await import(`../games/${gameId}/view.js`));
     if (view) return view;
     console.error(`[gamehost] js/games/${gameId}/view.js no exporta mount(container, ctx)`);
+    return loadPlaceholder(`js/games/${gameId}/view.js no exporta mount(container, ctx)`);
   } catch (err) {
-    // Si el archivo existe pero falla (import roto, error de sintaxis), que se vea en la consola
+    // Si el archivo existe pero falla (import roto, error de sintaxis, 404), que se vea en la consola y en la vista provisoria
     console.error(`[gamehost] no se pudo cargar js/games/${gameId}/view.js:`, err);
+    return loadPlaceholder(err);
   }
-  return loadPlaceholder();
 }
 
 // Estado público de la mesa: compartida = tables[id]; solitaria = tables[id][mi id]
@@ -81,20 +117,29 @@ export async function mountGame(gameId, container) {
   };
   container.replaceChildren();
   let view = await loadView(gameId);
+  ctx.fallbackReason = lastFallbackReason;
+  lastFallbackReason = '';
   try {
     view.mount(container, ctx);
   } catch (err) {
     // La vista real falló al montarse (p. ej. GSAP no cargó): se muestra el error y se cae a la provisoria
     console.error(`[gamehost] falló el montaje de la vista de ${gameId}:`, err);
     container.replaceChildren();
-    view = await loadPlaceholder();
+    view = await loadPlaceholder(err);
+    ctx.fallbackReason = lastFallbackReason;
     view.mount(container, ctx);
   }
   let alive = true;
   const api = {
     update(state) {
       if (!alive || !state) return;
-      view.update(tableState(state, gameId, me.id), buildInfo(state, gameId, me));
+      const ts = tableState(state, gameId, me.id);
+      if (!ts || !Object.keys(ts).length) return;   // la mesa todavía no publicó su estado: nada que dibujar
+      try {
+        view.update(ts, buildInfo(state, gameId, me));
+      } catch (err) {
+        console.error(`[gamehost] error al actualizar la vista de ${gameId}:`, err);
+      }
     },
     destroy() {
       if (!alive) return;
