@@ -20,6 +20,13 @@ export default {
       <p class="placeholder-view__msg" role="status"></p>
       <pre class="placeholder-view__state" aria-label="Estado de la mesa"></pre>`;
     container.append(box);
+    if (ctx.fallbackReason) {
+      const why = document.createElement('p');
+      why.className = 'hint';
+      why.style.cssText = 'color:#ff8a8a;font-size:12px;word-break:break-word';
+      why.textContent = 'La mesa real no pudo cargar: ' + ctx.fallbackReason;
+      box.querySelector('.hint').after(why);
+    }
     box.querySelector('.placeholder-view__title').textContent = gameMeta(ctx.gameId).name;
     const msg = box.querySelector('.placeholder-view__msg');
     const send = box.querySelector('.placeholder-view__send');
