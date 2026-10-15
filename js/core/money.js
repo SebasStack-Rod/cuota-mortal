@@ -1,4 +1,7 @@
 // js/core/money.js: unidad de dinero, fichas y formato. Exporta UNIT, CHIP_VALUES, fmt, chipUrl y breakdown.
+// COPIA LITERAL de la sección 3 del contrato. Este archivo es de la IA 1: al integrar, si ya tenés el suyo, es idéntico.
+// Todo monto es un entero en centavos: 100 = $1 = la ficha "1".
+
 export const UNIT = 100; // 100 centavos = $1
 export const CHIP_VALUES = [25, 50, 100, 500, 1000, 2500, 5000, 10000, 25000, 50000,
   100000, 250000, 500000, 1000000, 2500000, 5000000, 10000000]; // 17 fichas, de $0,25 a $100.000

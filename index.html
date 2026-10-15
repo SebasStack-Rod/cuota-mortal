@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<!-- index.html
+     Única página de Cuota Mortal. Acá está la estructura (HTML) de todas las pantallas;
+     js/main.js decide cuál se muestra y cada módulo de js/ui/ le da vida a la suya.
+     Se sirve con un servidor local (Live Server o python -m http.server), no con doble clic. -->
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Cuota Mortal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#0B0B14">
+  <meta name="description" content="Casino cooperativo para jugar con amigos. Todo el dinero es ficticio.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%B0%3C/text%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Monoton&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/ui.css">
+  <link rel="stylesheet" href="css/hud.css">
+  <link rel="stylesheet" href="css/salon.css">
+  <link rel="stylesheet" href="css/shop.css">
+  <link rel="stylesheet" href="css/end.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Aviso de conexión (se muestra solo si no estás online) -->
+    <div id="conn-banner" role="status" hidden></div>
+
+
+    <!-- ============ BARRAS FIJAS (HUD) ============ -->
+    <header id="hud-top" class="hud" hidden>
+      <div class="hud__bank">
+        <div id="hud-bank-stack" class="hud__stack"></div>
+        <div>
+          <span class="hud__label">Banco</span>
+          <span id="hud-bank" class="hud__bankval">$0</span>
+        </div>
+      </div>
+      <div class="hud__day">
+        <span id="hud-day">Día 1/7</span>
+        <span id="hud-timer" class="hud__timer">--:--</span>
+      </div>
+      <div class="hud__quota">
+        <span class="hud__label">Cuota</span>
+        <span id="hud-quota" class="hud__quotaval">$0</span>
+        <span id="hud-limit" class="hud__limit"></span>
+      </div>
+      <div id="hud-progress" class="hud__progress" role="progressbar" aria-label="Banco contra cuota" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div id="hud-fill" class="hud__fill"></div>
+      </div>
+    </header>
+
+    <div id="tray" class="tray" hidden>
+      <div id="bet-editor" class="bet-editor" hidden>
+        <div class="bet-editor__top">
+          <output id="bet-amount" class="bet-editor__amount" for="bet-slider bet-input">$0</output>
+          <span id="bet-range" class="hint"></span>
+        </div>
+        <input id="bet-slider" class="range" type="range" min="25" max="25" step="25" value="25" aria-label="Monto de la apuesta">
+        <div class="bet-editor__row">
+          <button type="button" class="bet-editor__btn" data-q="min">Mín.</button>
+          <button type="button" class="bet-editor__btn" data-q="minus" aria-label="Bajar el monto">−</button>
+          <input id="bet-input" class="bet-editor__input" type="number" inputmode="decimal" min="0" step="0.25" aria-label="Monto exacto en pesos">
+          <button type="button" class="bet-editor__btn" data-q="plus" aria-label="Subir el monto">+</button>
+          <button type="button" class="bet-editor__btn" data-q="max">Máx.</button>
+        </div>
+      </div>
+      <button id="bet-toggle" class="tray__amount" type="button" aria-expanded="false" aria-controls="bet-editor">
+        <span class="tray__amount-label">Apuesta</span>
+        <span id="bet-toggle-value" class="tray__amount-value">$0</span>
+      </button>
+      <div class="tray__scroll" role="listbox" aria-label="Fichas para apostar"></div>
+    </div>
+
+    <nav id="hud-bar" class="bar" aria-label="Acciones de la mesa" hidden>
+      <button class="bar__btn" type="button" data-act="leave">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v16h4M15 8l4 4-4 4M19 12H9"/></svg>Salir
+      </button>
+      <button class="bar__btn" type="button" data-act="switch">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>Cambiar de juego
+      </button>
+      <button class="bar__btn" type="button" data-act="profit">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></svg>Ganancias
+      </button>
+      <button class="bar__btn" type="button" data-act="team">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5a3 3 0 010 6M18 14c2 .7 3 2.6 3 6"/></svg>Equipo
+      </button>
+    </nav>
+
+    <div id="sheet-root" class="sheet-root" hidden></div>
+    <div id="toasts" role="status" aria-live="polite"></div>
+    <p id="sr-announcer" class="sr-only" role="status" aria-live="polite"></p>
+
+    <!-- ============ 1. INICIO ============ -->
+    <section class="screen screen--home" id="screen-home" data-screen="home" aria-labelledby="home-title">
+      <header class="sign" tabindex="-1" data-focus>
+        <h1 id="home-title" class="sr-only">Cuota Mortal</h1>
+        <div class="neon neon--cyan" data-fit aria-hidden="true">CUOTA</div>
+        <div class="neon neon--magenta" data-fit aria-hidden="true">MORTAL</div>
+        <p class="tagline">Un casino, una deuda y tus amigos.</p>
+        <div class="chip-fan" aria-hidden="true">
+          <img src="assets/chips/chip_25.png" alt="" width="512" height="512">
+          <img src="assets/chips/chip_5.png" alt="" width="512" height="512">
+          <img src="assets/chips/chip_10.png" alt="" width="512" height="512">
+        </div>
+      </header>
+
+      <div class="panel panel--framed home-card">
+        <label class="field-label" for="home-name">Tu nombre</label>
+        <input id="home-name" class="input" type="text" maxlength="12" autocomplete="nickname"
+               autocapitalize="words" spellcheck="false" enterkeyhint="next" placeholder="Cómo te llamás">
+
+        <button id="home-create" class="btn btn--gold btn--block" type="button">Crear sala</button>
+
+        <p class="or-line"><span>o entrá con un código</span></p>
+
+        <div class="join-row">
+          <input id="home-code" class="input input--code" type="text" maxlength="4" inputmode="text"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go"
+                 placeholder="ABCD" aria-label="Código de sala, 4 letras">
+          <button id="home-join" class="btn btn--ghost" type="button">Unirse</button>
+        </div>
+
+        <p id="home-error" class="form-error" role="alert"></p>
+      </div>
+
+      <nav class="home-links" aria-label="Más opciones">
+        <button id="home-credits" class="btn-link" type="button">Créditos</button>
+        <button id="home-settings" class="btn-link" type="button">Ajustes</button>
+      </nav>
+    </section>
+
+    <!-- ============ 2. SALA DE ESPERA ============ -->
+    <section class="screen screen--lobby" id="screen-lobby" data-screen="lobby" aria-labelledby="lobby-title">
+      <h1 id="lobby-title" class="sr-only" tabindex="-1" data-focus>Sala de espera</h1>
+
+      <div class="panel panel--framed code-card">
+        <p class="field-label">Código de sala</p>
+        <div id="lobby-code" class="neon neon--cyan room-code" data-fit>----</div>
+        <div class="code-actions">
+          <button id="lobby-copy" class="btn btn--ghost btn--small" type="button">Copiar</button>
+          <button id="lobby-share" class="btn btn--ghost btn--small" type="button" hidden>Compartir</button>
+        </div>
+        <p id="lobby-copy-msg" class="sr-only" role="status"></p>
+      </div>
+
+      <div class="panel players-panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Jugadores</h2>
+          <span id="lobby-count" class="panel-count">1/8</span>
+        </div>
+        <ul id="lobby-players" class="players"></ul>
+        <p id="lobby-hint" class="hint" hidden></p>
+      </div>
+
+      <div id="lobby-daylen-panel" class="panel daylen" hidden>
+        <p class="field-label" id="lobby-daylen-label">Duración del día</p>
+        <div id="lobby-daylen" class="seg" role="group" aria-labelledby="lobby-daylen-label"></div>
+        <p id="lobby-daylen-guest" class="hint" hidden></p>
+      </div>
+
+      <div class="lobby-foot">
+        <button id="lobby-leave" class="btn btn--ghost" type="button">Salir</button>
+        <button id="lobby-start" class="btn btn--gold" type="button" hidden>Empezar</button>
+        <p id="lobby-wait" class="wait" role="status" hidden></p>
+      </div>
+    </section>
+
+
+    <!-- ============ 3. SALÓN DEL CASINO ============ -->
+    <section class="screen screen--salon screen--game" id="screen-salon" data-screen="salon" aria-labelledby="salon-title">
+      <h1 id="salon-title" class="sr-only" tabindex="-1" data-focus>Salón del casino</h1>
+      <p class="salon-hint">Tocá una mesa para sentarte.</p>
+      <div id="salon-area" class="salon-area">
+        <div id="salon-stage" class="salon-stage">
+          <canvas id="salon-canvas" width="176" height="256" aria-hidden="true"></canvas>
+          <div id="salon-zones" class="salon-zones"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4. MESA (la vista del juego se monta dentro) ============ -->
+    <section class="screen screen--table screen--game" id="screen-table" data-screen="table" aria-labelledby="table-title">
+      <h1 id="table-title" class="sr-only" tabindex="-1" data-focus>Mesa de juego</h1>
+      <div id="game-container" class="game-container"></div>
+    </section>
+
+    <!-- ============ 5. TIENDA (fase shop) ============ -->
+    <section class="screen screen--shop screen--game" id="screen-shop" data-screen="shop" aria-labelledby="shop-title">
+      <div class="shop-head">
+        <h1 id="shop-title" class="screen-title" tabindex="-1" data-focus>Tienda</h1>
+        <div class="shop-money">
+          <span>Banco<b id="shop-bank">$0</b></span>
+          <span id="shop-quota-row">Próxima cuota<b id="shop-quota">$0</b></span>
+        </div>
+      </div>
+      <div class="shop-scroll">
+        <div id="shop-vote" class="panel panel--framed vote" hidden></div>
+        <section aria-labelledby="shop-items-title">
+          <h2 id="shop-items-title" class="sr-only">Ítems a la venta</h2>
+          <ul id="shop-items" class="items"></ul>
+        </section>
+        <section class="panel owned" aria-labelledby="shop-owned-title">
+          <div class="panel-head"><h2 id="shop-owned-title" class="panel-title">Lo que tienen</h2></div>
+          <div id="shop-owned"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ============ 6. COBRO DEL PRESTAMISTA (fase collect) ============ -->
+    <section class="screen screen--collect screen--game" id="screen-collect" data-screen="collect" aria-labelledby="collect-title">
+      <h1 id="collect-title" class="screen-title" tabindex="-1" data-focus>El Prestamista cobra</h1>
+      <div class="lender" id="collect-lender" aria-hidden="true">
+        <svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg" fill="none">
+          <!-- sombrero -->
+          <ellipse cx="100" cy="62" rx="62" ry="11" fill="#07070D" stroke="currentColor" stroke-width="3"/>
+          <path d="M60 60 L66 22 Q100 12 134 22 L140 60 Z" fill="#07070D" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M63 48 H137" stroke="currentColor" stroke-width="6"/>
+          <!-- cara en sombra con ojos -->
+          <path d="M70 66 H130 V104 Q130 128 100 130 Q70 128 70 104 Z" fill="#121221" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+          <ellipse class="lender__eyes" cx="86" cy="94" rx="5" ry="3.5"/>
+          <ellipse class="lender__eyes" cx="114" cy="94" rx="5" ry="3.5"/>
+          <path d="M88 113 Q100 119 112 113" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <!-- traje, corbata -->
+          <path d="M30 218 Q32 146 76 134 L100 156 L124 134 Q168 146 170 218 Z" fill="#07070D" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M100 156 L92 176 L100 206 L108 176 Z" fill="currentColor"/>
+          <!-- mano abierta pidiendo -->
+          <path d="M150 178 Q172 176 186 164 L192 170 Q178 192 150 196 Z" fill="#121221" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <p class="lender__says" id="collect-says"></p>
+      <div class="panel panel--framed collect-card" id="collect-card">
+        <p class="collect-verdict" id="collect-verdict" role="status"></p>
+        <p class="collect-detail" id="collect-detail"></p>
+      </div>
+      <div class="panel collect-day" id="collect-day" hidden></div>
+    </section>
+
+    <!-- ============ 7. FINAL (fases gameover y victory) ============ -->
+    <section class="screen screen--end screen--game" id="screen-end" data-screen="end" aria-labelledby="end-title">
+      <div class="end-confetti" id="end-confetti" aria-hidden="true"></div>
+      <h1 id="end-title" class="screen-title" tabindex="-1" data-focus>Deuda impaga</h1>
+      <p class="end-sub" id="end-sub"></p>
+      <p class="end-mine" id="end-mine" hidden></p>
+      <div class="end-tabs" id="end-tabs" role="group" aria-label="Rankings"></div>
+      <ol class="end-list" id="end-list" aria-live="polite"></ol>
+      <div class="end-actions">
+        <button id="end-rematch" class="btn btn--gold" type="button" hidden>Revancha</button>
+        <p id="end-wait" class="wait" hidden>Espera a que el anfitrión pida la revancha.</p>
+        <button id="end-leave" class="btn btn--ghost" type="button">Salir de la sala</button>
+      </div>
+    </section>
+
+    <!-- ============ AJUSTES ============ -->
+    <section class="screen screen--settings" id="screen-settings" data-screen="settings" aria-labelledby="settings-title">
+      <h1 id="settings-title" class="screen-title" tabindex="-1" data-focus>Ajustes</h1>
+
+      <div class="panel settings-list">
+        <div class="setting">
+          <div>
+            <p id="set-sound-label" class="setting__name">Sonido</p>
+            <p class="setting__help">Fichas, cartas, dados y juegos.</p>
+          </div>
+          <button id="set-sound" class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="set-sound-label">
+            <span class="switch__knob"></span>
+          </button>
+        </div>
+
+        <div class="setting setting--col">
+          <label for="set-volume" class="setting__name">Volumen <output id="set-volume-out" for="set-volume">80%</output></label>
+          <input id="set-volume" class="range" type="range" min="0" max="100" step="5" value="80">
+        </div>
+
+        <div class="setting setting--col">
+          <p id="set-quality-label" class="setting__name">Calidad de animación</p>
+          <div id="set-quality" class="seg" role="group" aria-labelledby="set-quality-label">
+            <button class="seg__btn" type="button" data-quality="alta" aria-pressed="true">Alta</button>
+            <button class="seg__btn" type="button" data-quality="baja" aria-pressed="false">Baja</button>
+          </div>
+          <p class="setting__help">Si tu celular va lento, elegí Baja: hay menos fichas y menos brillos.</p>
+        </div>
+      </div>
+
+      <button id="settings-back" class="btn btn--gold btn--block screen-back" type="button">Volver</button>
+    </section>
+
+    <!-- ============ CRÉDITOS ============ -->
+    <section class="screen screen--credits" id="screen-credits" data-screen="credits" aria-labelledby="credits-title">
+      <h1 id="credits-title" class="screen-title" tabindex="-1" data-focus>Créditos</h1>
+      <div id="credits-body" class="panel credits-body" tabindex="0" aria-live="polite">Cargando…</div>
+      <button id="credits-back" class="btn btn--gold btn--block screen-back" type="button">Volver</button>
+    </section>
+
+  </div>
+
+  <!-- GSAP (animaciones de fichas y números). Versión fija, publicada hace más de dos semanas. -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

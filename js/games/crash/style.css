@@ -1,0 +1,48 @@
+/* js/games/crash/style.css: estilos del Crash. Clases con prefijo cra-, todas dentro de .game--crash. */
+.game--crash { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 20%, #1a1230, var(--bg, #0B0B14) 70%); color: var(--text, #F5F1E6);
+  font-family: var(--font-body, system-ui, sans-serif); user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.game--crash *, .game--crash *::before, .game--crash *::after { box-sizing: border-box; }
+.game--crash button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+
+.game--crash .cra-hist { flex: 0 0 auto; display: flex; gap: 4px; padding: 6px 8px; overflow: hidden; min-height: 32px; }
+.game--crash .cra-pill { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; font: 700 11px/1 var(--font-body, sans-serif); background: #2a1620; color: #ff8a98; }
+.game--crash .cra-pill.is-mid { background: #12261f; color: var(--win, #2EE59D); }
+.game--crash .cra-pill.is-high { background: #2c2610; color: var(--gold-light, #F3D77A); }
+
+.game--crash .cra-stage { position: relative; flex: 1 1 auto; min-height: 120px; }
+.game--crash .cra-stage canvas { position: absolute; inset: 0; display: block; }
+.game--crash .cra-center { position: absolute; left: 0; right: 0; top: 18%; text-align: center; pointer-events: none; }
+.game--crash .cra-mult { font: clamp(40px, 15vw, 64px)/1 var(--font-title, 'Bungee', cursive); text-shadow: 0 0 18px currentColor; transition: color .2s; }
+.game--crash .cra-sub { margin-top: 4px; font: 600 12px var(--font-body, sans-serif); letter-spacing: .2em; text-transform: uppercase; color: var(--text-dim, #A9A59A); }
+.game--crash .cra-center.is-crash .cra-mult { color: var(--loss, #FF4D5E); }
+.game--crash .cra-center.is-crash .cra-sub { color: var(--loss, #FF4D5E); }
+
+.game--crash .cra-players { flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; padding: 4px 10px; min-height: 26px; position: relative; }
+.game--crash .cra-row { display: flex; align-items: center; gap: 5px; height: 20px; font-size: 11px; min-width: 0; white-space: nowrap; position: relative; }
+.game--crash .cra-dot { flex: 0 0 8px; height: 8px; border-radius: 50%; }
+.game--crash .cra-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.game--crash .cra-st { flex: 0 0 auto; font-weight: 700; }
+.game--crash .cra-row.is-in .cra-st { animation: cra-blink .8s steps(2) infinite; }
+.game--crash .cra-row.is-cash .cra-st { color: var(--win, #2EE59D); }
+.game--crash .cra-row.is-lost .cra-st { color: var(--loss, #FF4D5E); }
+.game--crash .cra-row.is-me .cra-name { font-weight: 700; }
+.game--crash .cra-empty { grid-column: 1 / 3; text-align: center; color: var(--text-dim, #A9A59A); font-size: 11px; line-height: 20px; }
+@keyframes cra-blink { 50% { opacity: .35; } }
+.game--crash .cra-bit { position: absolute; pointer-events: none; z-index: 5; }
+
+.game--crash .cra-panel { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; padding: 4px 8px 8px; }
+.game--crash .cra-ctl { display: flex; gap: 8px; }
+.game--crash .cra-ctl .amt-btn { flex: 1; }
+.game--crash .cra-auto { flex: 1; min-height: 44px; min-width: 0; border-radius: 12px; border: 1px solid rgba(212,175,55,.5); background: var(--panel, rgba(20,20,34,.86));
+  color: var(--text, #F5F1E6); font: 600 14px var(--font-body, sans-serif); text-align: center; }
+.game--crash .cra-auto:disabled { opacity: .5; }
+.game--crash .cra-go { min-height: 54px; border-radius: 14px; font: 18px var(--font-title, 'Bungee', cursive); letter-spacing: .03em; color: #0B0B14;
+  background: linear-gradient(180deg, #F3D77A, #D4AF37); box-shadow: 0 4px 0 #8a6d1d; }
+.game--crash .cra-go:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 #8a6d1d; }
+.game--crash .cra-go.is-cash { background: linear-gradient(180deg, #5ff5bd, #2EE59D); box-shadow: 0 4px 0 #14805a; animation: cra-pulse .6s ease-in-out infinite alternate; }
+.game--crash .cra-go.is-cancel { background: linear-gradient(180deg, #ff8a98, #FF4D5E); box-shadow: 0 4px 0 #9b2b3a; font-size: 14px; }
+.game--crash .cra-go:disabled { opacity: .45; box-shadow: none; background: #3a3a50; color: var(--text-dim, #A9A59A); font-size: 14px; }
+@keyframes cra-pulse { from { box-shadow: 0 4px 0 #14805a, 0 0 6px rgba(46,229,157,.3); } to { box-shadow: 0 4px 0 #14805a, 0 0 22px rgba(46,229,157,.9); } }
+.game--crash .cra-notice { position: absolute; left: 50%; bottom: 150px; opacity: 0; padding: 8px 14px; border-radius: 999px; white-space: nowrap; z-index: 8; pointer-events: none;
+  background: var(--panel, rgba(20,20,34,.92)); border: 1px solid var(--loss, #FF4D5E); font: 600 13px var(--font-body, sans-serif); }
