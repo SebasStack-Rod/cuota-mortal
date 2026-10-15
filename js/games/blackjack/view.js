@@ -207,7 +207,7 @@ export function mount(container, ctx) {
 
   function frame_() {
     raf = requestAnimationFrame(frame_);
-    if (!S || document.hidden) return;
+    if (!S || !S.hands || document.hidden) return;
     const now = clock.now(), h = S.hands[you()];
     let left = -1, dur = 1;
     if (S.phase === 'betting') { left = S.phaseEndsAt - now; dur = BETTING_MS; }
@@ -235,6 +235,7 @@ export function mount(container, ctx) {
 
   return {
     update(state, info) {
+      if (!state || !state.shoe || !state.hands || !state.dealer) return;   // estado incompleto: se espera al siguiente
       S = state; I = info; liveNow = prev !== null; // la primera vez (entrar tarde) no se anima
       onTransition();
       shoeNum.textContent = String(S.shoe.left);
