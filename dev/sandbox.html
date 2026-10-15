@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!-- dev/sandbox.html: página para probar UN juego solo, sin las otras partes. Uso: dev/sandbox.html?game=roulette&seed=123
+     Hay que servir la carpeta cuota-mortal/ (por ejemplo `python -m http.server 8000`) y abrir http://localhost:8000/dev/sandbox.html -->
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="../"> <!-- así las rutas de assets (assets/chips/...) funcionan igual que en la página real -->
+  <title>Sandbox de juegos · Cuota Mortal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Monoton&family=Rubik:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="dev/sandbox.css">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+</head>
+<body>
+  <div class="sb-phone" id="sb-phone">
+    <div class="sb-top"><span id="sb-title">Juego</span><span class="sb-bank" id="sb-bank">$0</span></div>
+    <div class="sb-container" id="sb-container"></div>
+    <div class="sb-tray" id="sb-tray"></div>
+    <div class="sb-bottom"><span>barra inferior (IA 2)</span><span id="sb-whoami"></span></div>
+  </div>
+  <div class="sb-panel">
+    <section><h3>BANCO Y TAMAÑO</h3>
+      <div class="sb-row">Banco $ <input type="number" id="sb-bankin" value="2000" min="0"> <button id="sb-setbank">Poner</button></div>
+      <div class="sb-row">Pantalla <select id="sb-size"><option value="360,640">360×640</option><option value="390,844" selected>390×844</option><option value="430,932">430×932</option></select>
+        Calidad <select id="sb-quality"><option>alta</option><option>baja</option></select></div>
+      <div class="sb-row">Día <select id="sb-day"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select> <span id="sb-limits"></span></div>
+      <div class="sb-row"><label><input type="checkbox" id="sb-trebol"> Trébol (ganancia ×1,1)</label> <label><input type="checkbox" id="sb-ignorebank"> Ficha sin mirar el banco</label> <label><input type="checkbox" id="sb-rerolls"> Dados cargados (1 reroll)</label></div>
+    </section>
+    <section><h3>JUGADORES VIRTUALES (el próximo toque es de…)</h3>
+      <div class="sb-row" id="sb-players"></div>
+      <div class="sb-row" id="sb-seats"></div>
+    </section>
+    <section><h3>TIEMPO Y VISTA</h3>
+      <div class="sb-row"><button id="sb-t5">+5 s</button><button id="sb-t15">+15 s</button><button id="sb-remount">Remontar vista (entrar a mitad de ronda)</button></div>
+      <div class="sb-row" id="sb-force"></div>
+    </section>
+    <section><h3>ESTADO PÚBLICO</h3><pre id="sb-state"></pre></section>
+    <section><h3>EFECTOS (últimos)</h3><pre id="sb-log"></pre></section>
+    <section><h3>SONIDOS (últimos)</h3><pre id="sb-sounds"></pre></section>
+  </div>
+  <script type="module" src="dev/sandbox.js"></script>
+</body>
+</html>

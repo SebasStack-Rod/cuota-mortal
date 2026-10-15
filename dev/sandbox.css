@@ -1,0 +1,31 @@
+/* dev/sandbox.css: aspecto de la página de pruebas (copia las variables del tema, sección 8 del contrato). */
+:root { --bg: #0B0B14; --felt: #0B6B3A; --felt-dark: #07431F; --gold: #D4AF37; --gold-light: #F3D77A; --red: #B3201F;
+  --neon-magenta: #FF2BD6; --neon-cyan: #22E6FF; --win: #2EE59D; --loss: #FF4D5E; --text: #F5F1E6; --text-dim: #A9A59A;
+  --panel: rgba(20, 20, 34, 0.86); --radius: 14px; --font-neon: 'Monoton', cursive; --font-title: 'Bungee', cursive;
+  --font-body: 'Rubik', system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #05050a; color: var(--text); font-family: var(--font-body); display: flex; gap: 16px; padding: 12px; flex-wrap: wrap; align-items: flex-start; }
+.sb-phone { background: var(--bg); border: 2px solid #2a2a40; border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; flex: 0 0 auto; }
+.sb-top, .sb-bottom { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; background: #10101c; flex: 0 0 56px; font-size: 13px; color: var(--text-dim); }
+.sb-bank { font: 20px var(--font-title); color: var(--gold-light); padding: 4px 10px; border-radius: 10px; background: #1a1a2c; }
+.sb-container { position: relative; width: 100%; flex: 0 0 auto; overflow: hidden; }
+.sb-tray { height: 90px; flex: 0 0 90px; display: flex; gap: 6px; align-items: center; justify-content: center; background: #0e0e1a; padding: 0 6px; }
+.sb-chip { background: none; border: 2px solid transparent; border-radius: 12px; color: var(--text); font: 600 10px var(--font-body); display: flex; flex-direction: column; align-items: center; padding: 2px; cursor: pointer; }
+.sb-chip img { width: 44px; height: 44px; }
+.sb-chip.is-on { border-color: var(--gold-light); background: rgba(243,215,122,.12); }
+.sb-stack { position: relative; display: inline-block; }
+.sb-stack img { position: absolute; left: 0; }
+.sb-stack em { position: absolute; left: 0; right: 0; bottom: -14px; text-align: center; font: 600 10px var(--font-body); }
+.sb-fly { position: fixed; left: 0; top: 0; width: 28px; height: 28px; z-index: 9999; pointer-events: none; }
+.sb-panel { width: 340px; display: flex; flex-direction: column; gap: 10px; }
+.sb-panel section { background: var(--panel); border: 1px solid #2a2a40; border-radius: 12px; padding: 10px; }
+.sb-panel h3 { margin: 0 0 8px; font: 12px var(--font-title); color: var(--gold-light); letter-spacing: .06em; }
+.sb-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; font-size: 13px; }
+.sb-panel button, .sb-panel select, .sb-panel input[type=number] { font: 13px var(--font-body); background: #1c1c30; color: var(--text); border: 1px solid #3a3a58; border-radius: 8px; padding: 6px 9px; }
+.sb-panel button { cursor: pointer; }
+.sb-panel button.is-on { border-color: var(--gold-light); background: #2b2a14; }
+.sb-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+.sb-panel input[type=number] { width: 90px; }
+.sb-panel pre { margin: 0; max-height: 200px; overflow: auto; font-size: 11px; line-height: 1.35; color: #cfe; white-space: pre-wrap; word-break: break-all; }
+#sb-log, #sb-sounds { max-height: 120px; }
+.sb-bad { color: var(--loss); }
